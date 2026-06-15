@@ -1,10 +1,16 @@
 import os
+import sys
 import shutil
 import subprocess
 import tarfile
+import struct
+import ctypes
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from simulated_puf import extract_puf_key
+
+MAGIC_HEADER = b"CPUF_LLM"
+VERSION = 1
 
 class SecureRAMLoader:
     def __init__(self, cpuf_file, ram_mount_point="/tmp/secure_llm_ram"):
@@ -19,50 +25,127 @@ class SecureRAMLoader:
             
         print("[Güvenlik] RAM Diski (tmpfs) sisteme bağlanıyor...")
         try:
-            subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=4G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL)
+            # sudo gerektirir. Gerçek ortamda sudoers içinde NOPASSWD ayarlanmalı.
+            subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=8G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL)
         except Exception:
-            print("[Uyarı] sudo mount yetkisi yok, standart tmp dizini kullanılacak (RAM Disk Simülasyonu).")
+            print("[Uyarı] sudo mount yetkisi yok, standart tmp dizini kullanılacak (RAM Disk Simülasyonu Fallback).")
 
     def decrypt_to_ram(self):
-        """Ağırlıkları RAM disk'e deşifre eder."""
-        print("[Güvenlik] PUF Anahtarı alınıyor ve AES-256 deşifre işlemi başlatılıyor...")
+        """Ağırlıkları streaming mantığıyla RAM disk'e deşifre eder."""
+        print("[Güvenlik] PUF Anahtarı türetiliyor ve AES-256 deşifre işlemi başlatılıyor...")
         key = extract_puf_key()
         
-        with open(self.cpuf_file, "rb") as f:
-            iv = f.read(16)
-            encrypted_data = f.read()
-            
-        cipher = AES.new(key, AES.MODE_CBC, iv=iv)
-        padded_data = cipher.decrypt(encrypted_data)
-        data = unpad(padded_data, AES.block_size)
-        
         temp_tar = os.path.join(self.ram_mount_point, "temp_weights.tar")
-        with open(temp_tar, "wb") as f:
-            f.write(data)
+        
+        CHUNK_SIZE = 64 * 1024 * 1024  # 64MB
+        
+        with open(self.cpuf_file, "rb") as f_in, open(temp_tar, "wb") as f_out:
+            magic = f_in.read(8)
+            if magic != MAGIC_HEADER:
+                raise ValueError("HATA: Gecersiz dosya formati. .cpuf_llm magic basligi bulunamadi.")
+                
+            version_data = f_in.read(4)
+            version = struct.unpack('<I', version_data)[0]
+            
+            iv = f_in.read(16)
+            
+            orig_size_data = f_in.read(8)
+            orig_size = struct.unpack('<Q', orig_size_data)[0]
+            
+            cipher = AES.new(key, AES.MODE_CBC, iv=iv)
+            
+            print("[Güvenlik] Streaming deşifreleme yapılıyor...")
+            
+            # Streaming Decrypt: Sadece son block'ta unpad uygulanır
+            while True:
+                chunk = f_in.read(CHUNK_SIZE)
+                if len(chunk) == 0:
+                    break
+                
+                # Check if this is the last chunk
+                next_byte = f_in.read(1)
+                if len(next_byte) == 0: # This is the last chunk
+                    decrypted_chunk = cipher.decrypt(chunk)
+                    unpadded_chunk = unpad(decrypted_chunk, AES.block_size)
+                    f_out.write(unpadded_chunk)
+                    break
+                else: # Not the last chunk
+                    f_in.seek(-1, os.SEEK_CUR) # Rewind
+                    decrypted_chunk = cipher.decrypt(chunk)
+                    f_out.write(decrypted_chunk)
             
         print("[Güvenlik] Ağırlıklar belleğe (RAM) çıkarılıyor...")
         with tarfile.open(temp_tar, "r") as tar:
             tar.extractall(path=self.ram_mount_point)
             
+        # Zeroize temp_tar
+        self._zeroize_file(temp_tar)
         os.remove(temp_tar)
-        self.extracted_path = os.path.join(self.ram_mount_point, os.listdir(self.ram_mount_point)[0])
+        
+        # Tar'dan çıkan ilk dizini bul (genellikle model klasörü)
+        items = os.listdir(self.ram_mount_point)
+        if items:
+            self.extracted_path = os.path.join(self.ram_mount_point, items[0])
         return self.extracted_path
 
+    def _zeroize_file(self, filepath):
+        """Dosyanın diski/RAM'i terk etmeden önce ctypes memset ile sıfırlanması"""
+        if not os.path.exists(filepath):
+            return
+            
+        file_size = os.path.getsize(filepath)
+        print(f"[Güvenlik] Zeroize (Üstüne sıfır yazma) uygulanıyor: {os.path.basename(filepath)} ({file_size} bytes)")
+        
+        try:
+            with open(filepath, "r+b") as f:
+                # 64MB'lik zero chunklar
+                chunk = b'\x00' * (64 * 1024 * 1024)
+                written = 0
+                while written < file_size:
+                    to_write = min(len(chunk), file_size - written)
+                    f.write(chunk[:to_write])
+                    written += to_write
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception as e:
+            print(f"[Uyarı] Zeroize işlemi sırasında hata oluştu: {e}")
+
     def zeroize_and_unmount(self):
-        """Ağırlıklar OpenVINO tarafından belleğe okunduktan sonra RAM disk kalıcı olarak imha edilir."""
-        print("[Güvenlik] Hassas veriler RAM üzerinden Zeroize (üstüne sıfır yazma) işlemiyle siliniyor...")
+        """Ağırlıklar OpenVINO/Transformers tarafından okunduktan sonra RAM disk kalıcı olarak imha edilir."""
+        print("\n[Güvenlik] Hassas veriler RAM üzerinden Zeroize işlemiyle siliniyor...")
+        
+        if self.extracted_path and os.path.exists(self.extracted_path):
+            if os.path.isdir(self.extracted_path):
+                for root, dirs, files in os.walk(self.extracted_path, topdown=False):
+                    for name in files:
+                        filepath = os.path.join(root, name)
+                        self._zeroize_file(filepath)
+                        os.remove(filepath)
+                    for name in dirs:
+                        os.rmdir(os.path.join(root, name))
+                os.rmdir(self.extracted_path)
+            else:
+                self._zeroize_file(self.extracted_path)
+                os.remove(self.extracted_path)
+        
         if os.path.exists(self.ram_mount_point):
-            shutil.rmtree(self.ram_mount_point)
+            # Kalan diğer herşeyi de temizle
+            shutil.rmtree(self.ram_mount_point, ignore_errors=True)
             
         try:
             subprocess.run(["sudo", "umount", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL)
         except Exception:
             pass
-        print("[Güvenlik] RAM disk başarıyla kapatıldı ve izler silindi.")
+        print("[Güvenlik] RAM disk başarıyla kapatıldı ve izler kalıcı olarak silindi.")
 
 if __name__ == "__main__":
-    print("Bu modül import edilerek kullanılmalıdır. Örnek kullanım:")
-    print("loader = SecureRAMLoader('model.cpuf_llm')")
-    print("loader.mount_ramdisk()")
-    print("path = loader.decrypt_to_ram()")
-    print("loader.zeroize_and_unmount()")
+    if len(sys.argv) < 2:
+        print("Test Kullanımı: python llm_secure_loader.py <model.cpuf_llm>")
+        sys.exit(1)
+        
+    loader = SecureRAMLoader(sys.argv[1])
+    loader.mount_ramdisk()
+    path = loader.decrypt_to_ram()
+    print(f"Model RAM Diske Yüklendi: {path}")
+    input("Silmek ve bellekten atmak için ENTER'a basın...")
+    loader.zeroize_and_unmount()

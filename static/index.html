@@ -3,342 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberPUF Dashboard</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <title>CyberPUF LLM Edition</title>
     <link rel="stylesheet" href="/static/style.css">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws: wss:; img-src 'self' data:">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <!-- HEADER -->
-        <header class="glass-panel">
-            <div class="logo">
-                <h1>CyberPUF <span class="highlight">Edge-AI Dashboard</span></h1>
-            </div>
-            <div class="status-bar">
-                <button id="help-btn" class="btn small-btn help-btn">Yardım</button>
-                <div class="status-indicator">
-                    <span class="dot disconnected" id="ws-status-dot"></span>
-                    <span id="ws-status-text">Sunucu Bağlantısı Bekleniyor</span>
-                </div>
-            </div>
+    <div class="container">
+        <header>
+            <h1>CyberPUF <span>LLM Edition</span></h1>
+            <p>Donanım Tabanlı (PUF) Büyük Dil Modeli Güvenlik Katmanı</p>
         </header>
 
-        <!-- MAIN GRID -->
-        <main class="dashboard-grid">
-            
-            <!-- LEFT PANEL: Training Pipeline -->
-            <section class="panel glass-panel">
-                <h2>Faz 1: Model Eğitimi & Şifreleme</h2>
-                <form id="train-form">
-                    <div class="form-group">
-                        <label for="epochs">Epoch Sayısı</label>
-                        <input type="number" id="epochs" value="5" min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="batch_size">Batch Size</label>
-                        <select id="batch_size">
-                            <option value="64">64</option>
-                            <option value="128" selected>128</option>
-                            <option value="256">256</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="learning_rate">Learning Rate</label>
-                        <input type="number" step="0.001" id="learning_rate" value="0.001">
-                    </div>
-                    <div class="form-group">
-                        <label for="encryption_mode">AES Şifreleme Modu</label>
-                        <select id="encryption_mode">
-                            <option value="CBC" selected>AES-256-CBC</option>
-                            <option value="GCM">AES-256-GCM</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="quant_mode">Nicemleme (Quantization)</label>
-                        <select id="quant_mode">
-                            <option value="int8_weight" selected>INT8 (Weight-Only)</option>
-                            <option value="fp32">FP32 (Standart)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn primary-btn" id="train-btn">
-                        <span class="btn-text">Pipeline'ı Başlat</span>
-                        <div class="spinner hidden" id="train-spinner"></div>
-                    </button>
-                </form>
-            </section>
-
-            <!-- MIDDLE PANEL 1: Phase 2 -->
-            <section class="panel glass-panel">
-                <h2>Faz 2: Donanım Sentezi & Simülasyon</h2>
-                
-                <div class="architecture-diagram" style="flex-direction: column; gap: 0.5rem; align-items: stretch; justify-content: center; flex: 1;">
-                    <div class="arch-node puf-node">
-                        <h4>VHDL / RTL</h4>
-                        <p>RO-PUF & AES-256</p>
-                    </div>
-                    <div class="arch-arrow" style="transform: rotate(90deg); margin: -5px 0;">➔</div>
-                    <div class="arch-node hw-node" style="border-color: var(--neon-purple);">
-                        <h4>GHDL Simülasyonu</h4>
-                        <p>Donanım Doğrulama</p>
-                    </div>
+        <div class="dashboard grid-layout">
+            <div class="card status-card">
+                <h2>Sistem Durumu</h2>
+                <div class="status-item">
+                    <span>PUF Anahtar Özeti (Hash):</span>
+                    <strong id="puf-hash" class="highlight">Yükleniyor...</strong>
                 </div>
-
-                <div class="simulation-controls">
-                    <p class="description">VHDL donanım kodlarını GHDL ile derleyip testbench'leri çalıştırın.</p>
-                    <button class="btn secondary-btn" id="hw-sim-btn">
-                        <span class="btn-text">Donanımı Derle ve Test Et</span>
-                        <div class="spinner hidden" id="hw-sim-spinner"></div>
-                    </button>
+                <div class="status-item">
+                    <span>RAM Disk Bağlantısı (tmpfs):</span>
+                    <strong id="ramdisk-status">Yükleniyor...</strong>
                 </div>
-            </section>
-
-            <!-- MIDDLE PANEL 2: System Architecture & Simulation -->
-            <section class="panel glass-panel">
-                <h2>Faz 3: Gömülü Donanım Simülasyonu</h2>
-                
-                <div class="architecture-diagram">
-                    <div class="arch-node puf-node">
-                        <h4>RO-PUF</h4>
-                        <p>Fiziksel Entropi</p>
-                    </div>
-                    <div class="arch-arrow">➔</div>
-                    <div class="arch-node aes-node">
-                        <h4>AES-256 Core</h4>
-                        <p>Donanım Şifre Çözücü</p>
-                    </div>
-                    <div class="arch-arrow">➔</div>
-                    <div class="arch-node ai-node">
-                        <h4>AI Engine</h4>
-                        <p>Bare-Metal C Çıkarımı</p>
-                    </div>
+                <div class="status-item">
+                    <span>RAM Disk Konumu:</span>
+                    <strong id="ramdisk-path">Yükleniyor...</strong>
                 </div>
-
-                <div class="simulation-controls">
-                    <p class="description">Gömülü C kodlarını derleyip Xilinx Baremetal simülatöründe çalıştırmak için tetikleyin.</p>
-                    <button class="btn secondary-btn" id="sim-btn">
-                        <span class="btn-text">C Simülatörünü Derle ve Çalıştır</span>
-                        <div class="spinner hidden" id="sim-spinner"></div>
-                    </button>
+                <div class="status-item">
+                    <span>Aktif LLM Modeli:</span>
+                    <strong id="model-status">Yükleniyor...</strong>
                 </div>
-            </section>
-
-            <!-- RIGHT PANEL: Test Playground -->
-            <section class="panel glass-panel">
-                <h2>Çıkarım (Inference) Playground</h2>
-                <div class="playground-content">
-                    <div class="image-selector">
-                        <label>Test Görseli Seçin (CIFAR-10):</label>
-                        <select id="test-image-select">
-                            <option value="">Görsel Bekleniyor...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="image-preview-container">
-                        <img id="test-image-preview" src="" alt="Görsel Önizleme" class="hidden">
-                        <div id="image-placeholder">Resim Yok</div>
-                    </div>
-
-                    <div class="result-display">
-                        <div class="result-box">
-                            <span class="label">Tahmin Edilen Sınıf:</span>
-                            <span class="value" id="pred-class">---</span>
-                        </div>
-                        <div class="result-box">
-                            <span class="label">Güven (Güven):</span>
-                            <span class="value" id="pred-conf">---</span>
-                        </div>
-                        <div class="result-box">
-                            <span class="label">PUF Durumu:</span>
-                            <span class="value" id="puf-status">---</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- RIGHT PANEL 2: Security Tests -->
-            <section class="panel glass-panel">
-                <h2>Faz 4: Güvenlik & Sızma Analizi</h2>
-                <div class="simulation-controls">
-                    <p class="description">CyberPUF sisteminin kriptografik bütünlüğüne ve PUF hata düzeltme (Fuzzy Extractor) modülüne yönelik siber saldırıları (Tampering, Gürültü Enjeksiyonu) simüle edin.</p>
-                    <button class="btn primary-btn" id="btn-security-test" style="background: linear-gradient(135deg, rgba(220, 20, 60, 0.8), rgba(255, 69, 0, 0.8)); border-color: crimson;">
-                        <span class="btn-text">Güvenlik Testlerini Başlat</span>
-                        <div class="spinner hidden" id="sec-spinner"></div>
-                    </button>
-                </div>
-            </section>
-            
-            <!-- NEW PHASES (5, 6, 7) -->
-            <!-- RIGHT PANEL 3: OTA Deployment -->
-            <section class="panel glass-panel">
-                <h2>Faz 5: Uç Cihaz Dağıtımı</h2>
-                <div class="simulation-controls">
-                    <p class="description">Şifrelenmiş yapay zeka modelini (ağırlıkları) güvenli MQTT/HTTPS kanalı üzerinden uç cihaza (Edge Node) aktarın.</p>
-                    <button class="btn secondary-btn" id="btn-phase5" style="border-color: var(--neon-cyan);">
-                        <span class="btn-text">Modeli Cihaza Gönder</span>
-                        <div class="spinner hidden" id="phase5-spinner"></div>
-                    </button>
-                </div>
-            </section>
-
-            <!-- RIGHT PANEL 4: Network Monitor -->
-            <section class="panel glass-panel">
-                <h2>Faz 6: Ağ Trafiği Gözetimi</h2>
-                <div class="simulation-controls">
-                    <p class="description">Dağıtım ve çıkarım sırasındaki ağ paketlerini dinleyerek MiTM (Ortadaki Adam) saldırılarını analiz edin.</p>
-                    <button class="btn secondary-btn" id="btn-phase6" style="border-color: var(--neon-cyan);">
-                        <span class="btn-text">Ağ Trafiğini İzle</span>
-                        <div class="spinner hidden" id="phase6-spinner"></div>
-                    </button>
-                </div>
-            </section>
-
-            <!-- RIGHT PANEL 5: TEE Attestation -->
-            <section class="panel glass-panel">
-                <h2>Faz 7: TEE Attestation</h2>
-                <div class="simulation-controls">
-                    <p class="description">İşlemlerin orijinal donanımda (CyberPUF Core) çalıştığını doğrulayan kriptografik Donanım Onay Raporu oluşturun.</p>
-                    <button class="btn secondary-btn" id="btn-phase7" style="border-color: var(--neon-cyan);">
-                        <span class="btn-text">Attestation Raporu Al</span>
-                        <div class="spinner hidden" id="phase7-spinner"></div>
-                    </button>
-                </div>
-            </section>
-        </main>
-
-        <!-- WEIGHT VISUALIZATION PANEL -->
-        <section class="panel glass-panel weight-viz-panel">
-            <div class="viz-header">
-                <h2>Ağırlık Görselleştirici (Weight Visualization)</h2>
-                <button class="btn secondary-btn small-btn" id="load-viz-btn">
-                    <span class="btn-text">Görselleri Yükle</span>
-                    <div class="spinner hidden" id="viz-spinner"></div>
-                </button>
-            </div>
-            <div class="viz-content">
-                <div class="viz-box">
-                    <h3>Orijinal Ağırlıklar (Çözülmüş)</h3>
-                    <div class="viz-image-wrapper">
-                        <img id="viz-plain" src="" class="hidden" alt="Plaintext Weights">
-                        <div class="viz-placeholder" id="viz-plain-placeholder">Görsel Bekleniyor...</div>
-                    </div>
-                </div>
-                <div class="viz-arrow">➔ AES-256 ➔</div>
-                <div class="viz-box">
-                    <h3>Şifrelenmiş Ağırlıklar (Gürültü)</h3>
-                    <div class="viz-image-wrapper">
-                        <img id="viz-cipher" src="" class="hidden" alt="Encrypted Weights">
-                        <div class="viz-placeholder" id="viz-cipher-placeholder">Görsel Bekleniyor...</div>
-                    </div>
+                <div class="status-item">
+                    <span>Çalışma Süresi:</span>
+                    <strong id="uptime">0s</strong>
                 </div>
             </div>
-            <div class="viz-error hidden" id="viz-error"></div>
-        </section>
 
-        <!-- BOTTOM PANEL: Live Terminal -->
-        <footer class="terminal-panel" id="terminal-container">
-            <div class="terminal-header">
-                <span class="term-title">Sistem Konsolları</span>
-                <button id="clear-term-btn" class="btn small-btn">Tümünü Temizle</button>
-            </div>
-            <div class="terminals-wrapper" id="terminals-wrapper">
-                <div class="terminal-window" id="term-system">
-                    <div class="terminal-window-header">SYS.LOG // Ana Sistem</div>
-                    <div class="terminal-body" id="terminal-body-system">
-                        <div class="term-line welcome">CyberPUF OS v4.0.0-Gold Terminal'ine Hoş Geldiniz.</div>
-                    </div>
+            <div class="card controls-card">
+                <h2>Yönetim Konsolu</h2>
+                <div class="control-group">
+                    <label>Şifrelenecek Model Klasörü:</label>
+                    <input type="text" id="model-input-path" placeholder="/home/user/my_llama_model">
+                    <label>Çıktı Dosyası (.cpuf_llm):</label>
+                    <input type="text" id="model-output-path" placeholder="/home/user/my_llama_model.cpuf_llm">
+                    <button id="btn-encrypt" class="btn primary">Modeli Şifrele</button>
                 </div>
-            </div>
-        </footer>
-
-
-    </div>
-    
-    <!-- AUTH MODAL -->
-    <div id="auth-modal" class="modal hidden">
-        <div class="modal-content glass-panel" style="max-width: 400px; text-align: center;">
-            <div class="modal-header">
-                <h2>Yetkilendirme Gerekiyor</h2>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 1rem;">Lütfen API Token giriniz (örn. dev_cyberpuf_token_12345):</p>
-                <input type="text" id="auth-token-input" class="form-control" placeholder="Token giriniz" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem; border-radius: 4px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.1); color: var(--text-color);">
-                <button id="auth-submit-btn" class="btn primary-btn" style="width: 100%;">Bağlan</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- HELP MODAL -->
-    <div id="help-modal" class="modal hidden">
-        <div class="modal-content glass-panel">
-            <div class="modal-header">
-                <h2>CyberPUF Proje Rehberi</h2>
-                <span class="close-btn" id="close-modal-btn">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="info-card overview-card">
-                    <h3>Genel Bakış</h3>
-                    <p>CyberPUF, Uç Cihazlarda (Edge-AI) çalışan Yapay Zeka modellerinin, donanım tabanlı Fiziksel Klonlanamaz Fonksiyonlar (PUF) ile şifrelenerek korunmasını sağlayan bir sistemdir.</p>
-                </div>
-                
-                <div class="info-card phase1-card">
-                    <h3>Faz 1: Model Eğitimi & Şifreleme</h3>
-                    <p>Yapay zeka modelini donanımımız için hazır hale getiren aşamadır.</p>
-                    <ul>
-                        <li><strong>Epoch & Batch Size:</strong> Modelin ne kadar uzun süre eğitileceğini (Epoch) ve her adımda kaç görselin işleneceğini (Batch Size) belirler. Yüksek değerler modelin başarısını artırabilir ancak eğitimi uzatır.</li>
-                        <li><strong>Learning Rate:</strong> Modelin öğrenme hızıdır. Çok yüksek olursa öğrenemez, çok düşük olursa eğitim yavaşlar. (Standart: 0.001)</li>
-                        <li><strong>Nicemleme (Quantization):</strong> Modelin ağırlıklarını FP32'den (32-bit küsuratlı) INT8'e (8-bit tam sayı) dönüştürerek bellek kullanımını 4 kat azaltır ve donanım hızını artırır. Uç cihazlar (Edge-AI) için kritiktir.</li>
-                        <li><strong>AES Şifreleme (CBC/GCM):</strong> INT8'e çevrilmiş model ağırlıklarını donanıma göndermeden önce şifreler.</li>
-                    </ul>
-                </div>
-                
-                <div class="info-card phase2-card">
-                    <h3>Faz 2: Donanım Sentezi & Simülasyon</h3>
-                    <p>Tasarlanan donanımın (VHDL) güvenliğinin ve fonksiyonelliğinin sentezlenip doğrulandığı aşamadır.</p>
-                    <ul>
-                        <li><strong>VHDL / RTL:</strong> Donanım kodlarını (RO-PUF & AES-256) derleyerek çip üzerinde yerleşimini (sentez) ayarlar.</li>
-                        <li><strong>GHDL Simülasyonu:</strong> Yazılan donanım kodlarını bilgisayar ortamında test ederek siber saldırılara (örneğin Decryption Oracle) karşı güvenliği doğrular.</li>
-                        <li><strong>Ağırlık Görselleştirici:</strong> Eğitim aşamasında şifrelenen model ağırlıklarının şifrelenmeden önceki (anlamlı) ve şifrelendikten sonraki (rastgele gürültü) hallerini görsel olarak kıyaslamanızı sağlar.</li>
-                    </ul>
-                </div>
-                
-                <div class="info-card phase3-card">
-                    <h3>Faz 3: Gömülü Donanım Simülasyonu</h3>
-                    <p>Donanımın (FPGA/Çip) simüle edildiği ve yapay zekanın uçta çalıştığı aşamadır.</p>
-                    <ul>
-                        <li><strong>RO-PUF (Halka Osilatörü):</strong> Çipin silikon üretim farklılıklarından rastgele ve kopyalanamaz bir donanım parmak izi üretir. Bu iz, AES anahtarına dönüştürülür. Çip dışında kimse bu anahtarı bilemez.</li>
-                        <li><strong>AES-256 Core:</strong> PUF'tan gelen donanım anahtarını kullanarak, şifrelenmiş olan yapay zeka modelini güvenli RAM bölgesinde çözer (Decrypt).</li>
-                        <li><strong>AI Engine (Bare-Metal C):</strong> Çözülmüş model ile doğrudan işlemci veya RTOS üzerinde çıkarım (Inference) yapar.</li>
-                    </ul>
-                </div>
-
-                <div class="info-card inference-card">
-                    <h3>Çıkarım (Inference) Playground</h3>
-                    <p>Sistemin dış dünya ile etkileşimini test ettiğimiz alandır.</p>
-                    <ul>
-                        <li>CIFAR-10 veri setinden rastgele çekilmiş bir resmi (Uçak, Kurbağa vb.) donanıma girdi olarak gönderirsiniz.</li>
-                        <li><strong>Tahmin Edilen Sınıf:</strong> Donanımdaki modelin bu resmi ne olarak algıladığını gösterir.</li>
-                        <li><strong>Güven (Confidence):</strong> Modelin bu tahminden ne kadar emin olduğunu yüzdelik olarak belirtir.</li>
-                        <li><strong>PUF Durumu:</strong> Eğer bir saldırgan modeli başka çipe kopyalamaya çalıştıysa, hedefteki PUF farklı bir anahtar üretecek ve <em>❌ BAŞARISIZ (Güvenlik İhlali)</em> hatası verecektir. Böylece AI çalınması engellenir.</li>
-                    </ul>
-                </div>
-                
-                <div class="info-card phase4-card">
-                    <h3>Faz 4: Güvenlik & Sızma Analizi</h3>
-                    <p>CyberPUF sisteminin siber saldırılara ve fiziksel müdahalelere karşı direncini interaktif olarak test eder.</p>
-                    <ul>
-                        <li><strong>Kriptografik Bütünlük (Tampering):</strong> Şifreli model dosyalarına dışarıdan yetkisiz müdahale edildiğinde sistemin durumu algılayıp çalışmayı reddetmesi senaryosu (Fail-safe).</li>
-                        <li><strong>Çevresel Gürültü (Noise):</strong> Sıcaklık, voltaj gibi çevresel değişimlerin donanımdaki PUF kararlılığına etkisini simüle eder. Hata düzeltme (Fuzzy Extractor) ile entropi kaybı yaşanıp yaşanmadığı analiz edilir.</li>
-                    </ul>
+                <hr>
+                <div class="control-group">
+                    <label>Yüklenecek Güvenli Model (.cpuf_llm):</label>
+                    <input type="text" id="cpuf-load-path" placeholder="/home/user/my_llama_model.cpuf_llm">
+                    <button id="btn-load" class="btn success">RAM Diske Deşifre Et (Yükle)</button>
+                    <button id="btn-zeroize" class="btn danger">Zeroize & RAM'i Temizle</button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="/static/app.js?v=3"></script>
+        <div class="card terminal-card">
+            <h2>İşlem Terminali</h2>
+            <div class="terminal" id="terminal-output">
+                <!-- Loglar buraya düşecek -->
+            </div>
+        </div>
+    </div>
+    <script src="/static/app.js"></script>
 </body>
 </html>
