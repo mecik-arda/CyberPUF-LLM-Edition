@@ -1,0 +1,834 @@
+:root {
+    /* Cyberpunk Neon Palette */
+    --bg-base: #050508;
+    --bg-panel: rgba(10, 15, 20, 0.85);
+    
+    --neon-green: #00ff66;
+    --neon-green-glow: rgba(0, 255, 102, 0.4);
+    
+    --neon-cyan: #00e5ff;
+    --neon-cyan-glow: rgba(0, 229, 255, 0.4);
+    
+    --neon-purple: #bd00ff;
+    --neon-purple-glow: rgba(189, 0, 255, 0.4);
+    
+    --danger: #ff0055;
+    --danger-glow: rgba(255, 0, 85, 0.4);
+    
+    --text-main: #e2e8f0;
+    --text-muted: #8b9bb4;
+    
+    --border-color: rgba(0, 229, 255, 0.2);
+    --border-glow: rgba(0, 229, 255, 0.5);
+    
+    --terminal-bg: rgba(5, 8, 12, 0.95);
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease-out;
+    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Custom Scrollbar for Cyberpunk feel */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-base);
+    border-left: 1px solid var(--border-color);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--neon-cyan);
+    border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--neon-green);
+    box-shadow: 0 0 10px var(--neon-green);
+}
+
+body {
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    
+    /* Subtle Grid Background */
+    background-image: 
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+    background-position: center center;
+}
+
+.app-container {
+    max-width: 1600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+}
+
+/* --- HUD GLASS PANELS --- */
+.glass-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 229, 255, 0.02);
+    backdrop-filter: blur(8px);
+    position: relative;
+}
+
+/* Corner Accents for Panels */
+.glass-panel::before, .glass-panel::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border: 2px solid transparent;
+    pointer-events: none;
+}
+.glass-panel::before {
+    top: -1px; left: -1px;
+    border-top-color: var(--neon-cyan);
+    border-left-color: var(--neon-cyan);
+}
+.glass-panel::after {
+    bottom: -1px; right: -1px;
+    border-bottom-color: var(--neon-cyan);
+    border-right-color: var(--neon-cyan);
+}
+
+/* --- HEADER --- */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    flex-shrink: 0;
+    border-bottom: 2px solid var(--neon-cyan);
+    box-shadow: 0 5px 20px var(--neon-cyan-glow);
+}
+
+.logo h1 {
+    font-weight: 700;
+    font-size: 1.4rem;
+    display: inline-block;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+.logo .highlight {
+    color: var(--neon-green);
+    text-shadow: 0 0 15px var(--neon-green-glow);
+}
+
+.status-bar {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+    border-radius: 0; /* Square for cyber look */
+    margin-right: 6px;
+    box-shadow: 0 0 8px currentColor;
+}
+.dot.connected { background-color: var(--neon-green); color: var(--neon-green); }
+.dot.disconnected { background-color: var(--danger); color: var(--danger); }
+
+/* --- MAIN GRID --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    flex-shrink: 0;
+}
+
+.panel {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.panel h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--neon-cyan);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 0.8rem;
+    text-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+/* Panel Numbering effect */
+.panel h2::before {
+    content: '>_';
+    color: var(--neon-purple);
+    font-family: 'Fira Code', monospace;
+    text-shadow: 0 0 8px var(--neon-purple-glow);
+}
+
+/* --- FORMS & CONTROLS --- */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+label {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: var(--neon-cyan);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+input, select {
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 0.6rem 0.8rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9rem;
+    transition: var(--transition-fast);
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px var(--neon-cyan-glow), inset 0 0 10px var(--neon-cyan-glow);
+    background: rgba(0, 229, 255, 0.1);
+}
+
+/* Dropdown styling for dark mode */
+select option {
+    background: var(--bg-base);
+    color: var(--neon-cyan);
+}
+
+/* --- BUTTONS --- */
+.btn {
+    padding: 0.7rem 1.2rem;
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: 'Fira Code', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: var(--transition-fast);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* Cyber Button Hover Effect */
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+.btn:hover::before {
+    left: 100%;
+}
+
+.primary-btn {
+    border-color: var(--neon-green);
+    color: var(--neon-green);
+    box-shadow: 0 0 10px var(--neon-green-glow) inset;
+}
+.primary-btn:hover {
+    background: rgba(0, 255, 102, 0.15);
+    box-shadow: 0 0 20px var(--neon-green-glow), inset 0 0 15px var(--neon-green-glow);
+    text-shadow: 0 0 5px var(--neon-green);
+}
+
+.secondary-btn {
+    border-color: var(--neon-purple);
+    color: var(--neon-purple);
+    box-shadow: 0 0 10px var(--neon-purple-glow) inset;
+}
+.secondary-btn:hover {
+    background: rgba(189, 0, 255, 0.15);
+    box-shadow: 0 0 20px var(--neon-purple-glow), inset 0 0 15px var(--neon-purple-glow);
+    text-shadow: 0 0 5px var(--neon-purple);
+}
+
+.small-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+}
+
+/* Help Button Special */
+.help-btn {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+}
+.help-btn:hover {
+    background: rgba(0, 229, 255, 0.1);
+    box-shadow: 0 0 15px var(--neon-cyan-glow);
+}
+
+/* Spinner */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-right-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.hidden { display: none !important; }
+
+/* --- ARCHITECTURE DIAGRAM --- */
+.architecture-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+}
+
+.arch-node {
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid var(--neon-cyan);
+    padding: 1rem 0.5rem;
+    text-align: center;
+    flex: 1;
+    position: relative;
+    box-shadow: inset 0 0 10px var(--neon-cyan-glow);
+}
+/* Cyberpunk corner cuts simulation using clip-path could be used, but keeping it boxy is also fine */
+.arch-node { clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%); }
+
+.arch-node h4 { 
+    font-size: 0.85rem; 
+    margin-bottom: 0.4rem; 
+    color: var(--neon-cyan);
+    font-family: 'Fira Code', monospace;
+}
+.arch-node p { 
+    font-size: 0.65rem; 
+    color: var(--text-muted); 
+    text-transform: uppercase;
+}
+
+.arch-arrow {
+    color: var(--neon-purple);
+    font-size: 1.2rem;
+    padding: 0 0.5rem;
+    text-shadow: 0 0 10px var(--neon-purple-glow);
+    animation: pulse-arrow 2s infinite;
+}
+@keyframes pulse-arrow {
+    0%, 100% { opacity: 0.5; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(3px); }
+}
+
+.simulation-controls {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.simulation-controls .description {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'Fira Code', monospace;
+    border-left: 2px solid var(--neon-purple);
+    padding-left: 0.8rem;
+}
+
+/* --- PLAYGROUND --- */
+.playground-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    height: 100%;
+}
+
+.image-preview-container {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+    height: 140px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+/* Grid inside image preview */
+.image-preview-container::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(rgba(0, 255, 102, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 102, 0.1) 1px, transparent 1px);
+    background-size: 10px 10px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#test-image-preview {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    position: relative;
+    z-index: 5;
+    /* Optional: make it look like a terminal display */
+    filter: contrast(1.2) brightness(1.1);
+}
+
+#image-placeholder {
+    color: var(--neon-cyan);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    opacity: 0.6;
+    animation: blink 2s infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+
+.result-display {
+    background: rgba(0, 255, 102, 0.05);
+    border: 1px solid var(--neon-green);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-top: auto;
+    box-shadow: inset 0 0 15px var(--neon-green-glow);
+}
+
+.result-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed rgba(0, 255, 102, 0.3);
+    padding-bottom: 0.5rem;
+}
+.result-box:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.result-box .label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'Fira Code', monospace;
+    text-transform: uppercase;
+}
+.result-box .value {
+    font-weight: 600;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.95rem;
+    color: var(--neon-green);
+    text-shadow: 0 0 5px var(--neon-green-glow);
+}
+
+.terminal-panel {
+    background: var(--terminal-bg);
+    border: 1px solid var(--border-color);
+    height: 350px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 20px rgba(0,0,0,1);
+}
+
+/* Scanline Effect */
+.terminal-panel::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 10;
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+}
+
+.terminal-header {
+    background: rgba(0, 229, 255, 0.1);
+    padding: 0.6rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--neon-cyan);
+    position: relative;
+    z-index: 11;
+}
+
+.term-title {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--neon-cyan);
+    text-transform: uppercase;
+    text-shadow: 0 0 5px var(--neon-cyan-glow);
+}
+.term-title::before {
+    content: '';
+}
+
+.terminals-wrapper {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    flex: 1;
+    gap: 15px;
+    padding: 10px;
+    height: 100%;
+}
+
+.terminal-window {
+    flex: 1;
+    min-width: 450px;
+    border: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.terminal-window-header {
+    background: rgba(0, 229, 255, 0.05);
+    padding: 0.4rem 0.8rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.terminal-window-header .close-term-btn {
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    line-height: 1;
+}
+.terminal-window-header .close-term-btn:hover {
+    color: var(--danger);
+    text-shadow: 0 0 5px var(--danger-glow);
+}
+
+.terminal-body {
+    padding: 1rem 1.2rem;
+    overflow-y: auto;
+    flex: 1;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    position: relative;
+    z-index: 11;
+}
+
+.term-line {
+    margin-bottom: 0.2rem;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+.term-line::before {
+    content: '>';
+    color: var(--neon-purple);
+    margin-right: 8px;
+    opacity: 0.7;
+}
+.term-line.welcome {
+    color: var(--neon-cyan);
+    margin-bottom: 1rem;
+    text-shadow: 0 0 5px var(--neon-cyan-glow);
+}
+.term-line.error { color: var(--danger); text-shadow: 0 0 5px var(--danger-glow); }
+.term-line.info { color: var(--neon-green); }
+
+/* --- WEIGHT VISUALIZATION --- */
+.weight-viz-panel {
+    margin-top: 1.5rem;
+    border-color: var(--neon-purple);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(189, 0, 255, 0.05);
+}
+.weight-viz-panel::before { border-color: var(--neon-purple); }
+.weight-viz-panel::after { border-color: var(--neon-purple); }
+
+.weight-viz-panel h2 {
+    color: var(--neon-purple);
+    border-bottom-color: rgba(189, 0, 255, 0.3);
+    text-shadow: 0 0 10px var(--neon-purple-glow);
+}
+
+.viz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.viz-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+}
+
+.viz-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.viz-box h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-family: 'Fira Code', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.viz-image-wrapper {
+    background: #000;
+    border: 1px solid var(--neon-purple);
+    width: 256px;
+    height: 256px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(189, 0, 255, 0.2);
+    position: relative;
+}
+/* Cyber Scanner effect inside wrapper */
+.viz-image-wrapper::after {
+    content: '';
+    position: absolute;
+    top: -100%; left: 0; width: 100%; height: 20%;
+    background: linear-gradient(to bottom, transparent, rgba(189, 0, 255, 0.4), transparent);
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+}
+@keyframes scan {
+    0% { top: -100%; }
+    100% { top: 200%; }
+}
+
+.viz-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+    filter: contrast(1.2);
+}
+
+.viz-placeholder {
+    color: var(--neon-purple);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    opacity: 0.5;
+}
+
+.viz-arrow {
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    font-family: 'Fira Code', monospace;
+    text-shadow: 0 0 10px var(--neon-cyan-glow);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.viz-arrow span { font-size: 0.7rem; color: var(--text-muted); }
+
+.viz-error {
+    margin-top: 1rem;
+    padding: 0.8rem;
+    background: rgba(255, 0, 85, 0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    text-shadow: 0 0 5px var(--danger-glow);
+}
+
+/* --- HELP MODAL --- */
+.modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity var(--transition-fast);
+}
+
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    display: flex !important;
+}
+
+.modal-content {
+    background: var(--bg-base);
+    border: 1px solid var(--neon-cyan);
+    box-shadow: 0 0 30px var(--neon-cyan-glow), inset 0 0 20px rgba(0,229,255,0.1);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Modal scanline */
+.modal-content::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
+    z-index: 10;
+    background-size: 100% 4px;
+    pointer-events: none;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--neon-cyan);
+    background: rgba(0, 229, 255, 0.1);
+    position: relative;
+    z-index: 11;
+}
+
+.modal-header h2 {
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--neon-cyan-glow);
+    margin: 0;
+}
+
+.close-btn {
+    color: var(--neon-cyan);
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.close-btn:hover { color: var(--danger); text-shadow: 0 0 10px var(--danger-glow); }
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 11;
+}
+
+.info-card {
+    padding: 1.2rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+}
+
+/* Data Bracket effect */
+.info-card::before, .info-card::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    border: 2px solid;
+}
+.info-card::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.info-card::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+.info-card h3 {
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+    font-family: 'Fira Code', monospace;
+    text-transform: uppercase;
+}
+
+.info-card p, .info-card ul {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    line-height: 1.6;
+}
+
+.info-card ul {
+    list-style-type: square;
+    padding-left: 1.5rem;
+    color: var(--text-muted);
+}
+.info-card li { margin-bottom: 0.5rem; }
+.info-card li strong { color: var(--neon-cyan); font-weight: normal; }
+
+/* Thematic Info Cards */
+.overview-card { border-left: 2px solid var(--neon-purple); }
+.overview-card::before, .overview-card::after { border-color: var(--neon-purple); }
+.overview-card h3 { color: var(--neon-purple); text-shadow: 0 0 5px var(--neon-purple-glow); }
+
+.phase1-card { border-left: 2px solid var(--neon-cyan); }
+.phase1-card::before, .phase1-card::after { border-color: var(--neon-cyan); }
+.phase1-card h3 { color: var(--neon-cyan); text-shadow: 0 0 5px var(--neon-cyan-glow); }
+
+.phase2-card { border-left: 2px solid var(--neon-purple); }
+.phase2-card::before, .phase2-card::after { border-color: var(--neon-purple); }
+.phase2-card h3 { color: var(--neon-purple); text-shadow: 0 0 5px var(--neon-purple-glow); }
+
+.phase3-card { border-left: 2px solid var(--neon-green); }
+.phase3-card::before, .phase3-card::after { border-color: var(--neon-green); }
+.phase3-card h3 { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green-glow); }
+
+.inference-card { border-left: 2px solid #ffcc00; }
+.inference-card::before, .inference-card::after { border-color: #ffcc00; }
+.inference-card h3 { color: #ffcc00; text-shadow: 0 0 5px rgba(255, 204, 0, 0.4); }
