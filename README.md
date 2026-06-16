@@ -28,32 +28,32 @@ CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Gü
 
 ```text
 +-------------------+       +-----------------------+       +-------------------+
-| Edge Device HW    |       |   CyberPUF LLM Core   |       | Volatile RAM Disk |
-| (MAC, CPU, Disk)  |       |                       |       | (tmpfs mount)     |
+| TEE / Edge HW     |       |   CyberPUF LLM Core   |       | Secure VFS Mount  |
+| (MAC, OS, UUID)   |       |                       |       | (tmpfs or FUSE)   |
 +---------+---------+       +-----------+-----------+       +---------+---------+
           |                             |                             |
           | 1. Extract HW Fingerprint   |                             |
           v                             v                             |
 +---------+---------+       +-----------+-----------+                 |
 |                   |       |                       |                 |
-|   Simulated PUF   +------>+  HKDF Key Derivation  |                 |
-|                   |       |                       |                 |
+| Simulated PUF &   +------>+  HKDF Key Derivation  |                 |
+| Dynamic Salt      |       |                       |                 |
 +-------------------+       +-----------+-----------+                 |
                                         |                             |
                                         | 2. Generate 256-bit Key     |
                                         v                             |
                             +-----------+-----------+                 |
-                            | AES-256-CBC Decryptor |                 |
+                            | AES-256-GCM Decryptor |                 |
                             | (Streaming Mode)      |                 |
                             +-----------+-----------+                 |
                                         ^                             |
                                         |                             |
                             +-----------+-----------+                 |
                             | Encrypted LLM Payload |                 |
-                            | (.cpuf_llm tarball)   |                 |
+                            | (HF Stream / Tarball) |                 |
                             +-----------------------+                 |
                                                                       |
-                            3. Decrypt chunks & Write to RAM Disk     |
+                            3. Decrypt chunks & Write to Mount        |
                             =========================================>|
                                                                       v
                                                             +---------+---------+
@@ -64,7 +64,7 @@ CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Gü
                                                             4. Load to VRAM     |
                                                             ===================>|
                                                                       |
-                            5. Zeroize & Unmount RAM Disk             |
+                            5. Smart Zeroize (PID Track) & Unmount    |
                             <=========================================+
 ```
 
