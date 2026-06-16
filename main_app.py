@@ -43,8 +43,17 @@ def encrypt_model():
     if not model_path or not output_path:
         return jsonify({"error": "model_path ve output_path gereklidir"}), 400
         
+    base_dir = os.path.abspath("/home/ardam/local_ai")
+    try:
+        abs_model = os.path.abspath(model_path)
+        abs_out = os.path.abspath(output_path)
+        if not abs_model.startswith(base_dir) or not abs_out.startswith(base_dir):
+            return jsonify({"error": "Güvensiz dizin erişimi reddedildi"}), 403
+    except Exception:
+        return jsonify({"error": "Yol doğrulama hatası"}), 400
+        
     def generate():
-        cmd = [sys.executable, "llm_encryptor.py", model_path, output_path]
+        cmd = [sys.executable, "llm_encryptor.py", abs_model, abs_out]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         for line in iter(process.stdout.readline, ''):
             yield f"data: {line.strip()}\n\n"
@@ -62,18 +71,18 @@ def load_model():
         return jsonify({"error": "cpuf_llm_path gereklidir"}), 400
         
     def generate():
-        inline_script = f"""
+        inline_script = """
 import sys
 from llm_secure_loader import SecureRAMLoader
 try:
-    loader = SecureRAMLoader('{cpuf_path}')
+    loader = SecureRAMLoader(sys.argv[1])
     loader.mount_ramdisk()
     path = loader.decrypt_to_ram()
-    print(f"Model Yüklendi: {{path}}")
+    print(f"Model Yüklendi: {path}")
 except Exception as e:
-    print(f"Hata: {{e}}")
+    print(f"Hata: {e}")
 """
-        cmd = [sys.executable, "-c", inline_script]
+        cmd = [sys.executable, "-c", inline_script, cpuf_path]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         for line in iter(process.stdout.readline, ''):
             yield f"data: {line.strip()}\n\n"
@@ -88,13 +97,13 @@ except Exception as e:
 @app.route('/api/zeroize', methods=['POST'])
 def zeroize():
     def generate():
-        inline_script = f"""
+        inline_script = """
 from llm_secure_loader import SecureRAMLoader
 try:
     loader = SecureRAMLoader('')
     loader.zeroize_and_unmount()
 except Exception as e:
-    print(f"Hata: {{e}}")
+    print(f"Hata: {e}")
 """
         cmd = [sys.executable, "-c", inline_script]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)

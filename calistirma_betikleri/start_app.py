@@ -68,16 +68,15 @@ def main():
     print()
     
     cmd = [
-        sys.executable, '-m', 'uvicorn',
-        'main_app:app',
+        sys.executable, '-m', 'flask',
+        '--app', 'main_app',
+        'run',
         '--host', host,
         '--port', port
     ]
     
-    # Windows'ta asyncio subprocess çökmelerini önlemek için reload kapatılır.
-    # Uvicorn başlatılırken OS tespiti ve detaylı loglama main_app.py içinde yapıldığı için burada sadece parametre ayarlanır.
     if sys.platform != 'win32':
-        cmd.append('--reload')
+        cmd.append('--debug')
         
     subprocess.run(cmd)
 

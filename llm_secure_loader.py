@@ -6,14 +6,13 @@ import tarfile
 import struct
 import ctypes
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
 from simulated_puf import extract_puf_key
 
 MAGIC_HEADER = b"CPUF_LLM"
 VERSION = 1
 
 class SecureRAMLoader:
-    def __init__(self, cpuf_file, ram_mount_point="/tmp/secure_llm_ram"):
+    def __init__(self, cpuf_file, ram_mount_point="/home/ardam/local_ai/temp_ramdisk"):
         self.cpuf_file = cpuf_file
         self.ram_mount_point = ram_mount_point
         self.extracted_path = None
@@ -26,9 +25,9 @@ class SecureRAMLoader:
         print("[Güvenlik] RAM Diski (tmpfs) sisteme bağlanıyor...")
         try:
             # sudo gerektirir. Gerçek ortamda sudoers içinde NOPASSWD ayarlanmalı.
-            subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=8G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL)
+            subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=8G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL, timeout=5)
         except Exception:
-            print("[Uyarı] sudo mount yetkisi yok, standart tmp dizini kullanılacak (RAM Disk Simülasyonu Fallback).")
+            print("[Uyarı] sudo mount yetkisi yok veya zaman aşımına uğradı, standart tmp dizini kullanılacak (RAM Disk Simülasyonu Fallback).")
 
     def decrypt_to_ram(self):
         """Ağırlıkları streaming mantığıyla RAM disk'e deşifre eder."""
@@ -38,6 +37,10 @@ class SecureRAMLoader:
         temp_tar = os.path.join(self.ram_mount_point, "temp_weights.tar")
         
         CHUNK_SIZE = 64 * 1024 * 1024  # 64MB
+        
+        file_size = os.path.getsize(self.cpuf_file)
+        # Format: MAGIC(8) + VERSION(4) + IV(16) + ORIG_SIZE(8) + DATA + TAG(16)
+        data_size = file_size - 8 - 4 - 16 - 8 - 16
         
         with open(self.cpuf_file, "rb") as f_in, open(temp_tar, "wb") as f_out:
             magic = f_in.read(8)
@@ -52,27 +55,25 @@ class SecureRAMLoader:
             orig_size_data = f_in.read(8)
             orig_size = struct.unpack('<Q', orig_size_data)[0]
             
-            cipher = AES.new(key, AES.MODE_CBC, iv=iv)
+            cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
             
             print("[Güvenlik] Streaming deşifreleme yapılıyor...")
             
-            # Streaming Decrypt: Sadece son block'ta unpad uygulanır
-            while True:
-                chunk = f_in.read(CHUNK_SIZE)
-                if len(chunk) == 0:
+            bytes_read = 0
+            while bytes_read < data_size:
+                read_size = min(CHUNK_SIZE, data_size - bytes_read)
+                chunk = f_in.read(read_size)
+                if not chunk:
                     break
+                f_out.write(cipher.decrypt(chunk))
+                bytes_read += len(chunk)
                 
-                # Check if this is the last chunk
-                next_byte = f_in.read(1)
-                if len(next_byte) == 0: # This is the last chunk
-                    decrypted_chunk = cipher.decrypt(chunk)
-                    unpadded_chunk = unpad(decrypted_chunk, AES.block_size)
-                    f_out.write(unpadded_chunk)
-                    break
-                else: # Not the last chunk
-                    f_in.seek(-1, os.SEEK_CUR) # Rewind
-                    decrypted_chunk = cipher.decrypt(chunk)
-                    f_out.write(decrypted_chunk)
+            tag = f_in.read(16)
+            try:
+                cipher.verify(tag)
+                print("[Güvenlik] MAC doğrulaması başarılı! Dosya bütünlüğü tam.")
+            except Exception as e:
+                raise ValueError(f"HATA: MAC doğrulaması başarısız. Dosya bozulmuş veya anahtar yanlış! ({e})")
             
         print("[Güvenlik] Ağırlıklar belleğe (RAM) çıkarılıyor...")
         with tarfile.open(temp_tar, "r") as tar:
