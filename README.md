@@ -74,6 +74,74 @@ CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Gü
 - `llm_secure_loader.py`: `tmpfs` RAM diskini bağlayan, çalışma zamanında deşifre eden ve kullanım sonrası RAM'den güvenli zeroize ile silen sarıcı.
 - `main_app.py`: Süreçleri takip edebileceğiniz Flask tabanlı karanlık temalı SSE web paneli.
 
+### 🛠️ Kurulum
+
+#### 1. Ön Gereksinimler
+- **Linux/WSL:** Linux `tmpfs` RAM disk özelliği kullanıldığı için bu proje Linux veya Windows Subsystem for Linux (WSL) üzerinde çalışacak şekilde tasarlanmıştır.
+- **Python:** Python 3.10+ sürümü gereklidir.
+- **Sudo Yetkisi:** RAM disk oluşturup bağlama (`mount/umount`) işlemleri için kullanıcının sudo yetkisine sahip olması veya `/etc/sudoers` dosyasında `mount` ve `umount` komutlarının şifresiz (`NOPASSWD`) yapılandırılmış olması gerekir.
+
+#### 2. Deponun İndirilmesi
+```bash
+git clone --recursive https://github.com/mecik-arda/CyberPUF-LLM-Edition.git
+cd CyberPUF-LLM-Edition
+```
+
+#### 3. Sanal Ortam Oluşturma ve Bağımlılıklar
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### 4. Yapılandırma (.env)
+`.env.example` dosyasını `.env` olarak kopyalayın ve gerekli değerleri doldurun:
+```bash
+cp .env.example .env
+```
+- `CYBERPUF_AES_KEY`: 64 karakterli güvenli bir hex anahtarı üretip buraya yazın. (Örn: `openssl rand -hex 32` komutu ile üretebilirsiniz).
+- `WEBSOCKET_TOKEN`: Gerçek zamanlı arayüz iletişimi için kullanılacak güçlü bir rastgele anahtar yazın.
+- `APP_HOST`: `127.0.0.1` veya sunucu IP adresi.
+- `APP_PORT`: Sunucunun çalışacağı port (Varsayılan: `8000`).
+
+---
+
+### 🚀 Kullanım
+
+#### A. CLI Komutları ile Modeli Şifreleme ve Yükleme
+Uygulamayı doğrudan komut satırı araçları ile çalıştırabilirsiniz:
+
+1. **Model Şifreleme (Encryption):**
+   ```bash
+   python3 llm_encryptor.py /yol/to/model_klasoru /yol/to/cikti_dosyasi.cpuf_llm
+   ```
+   *Bu komut, belirtilen klasördeki tüm ağırlıkları sıkıştırıp cihaz donanımından türetilen PUF anahtarıyla şifreler.*
+
+2. **Model Yükleme (Decryption & RAM-Disk Mount):**
+   ```bash
+   python3 llm_secure_loader.py /yol/to/cikti_dosyasi.cpuf_llm
+   ```
+   *Bu komut, geçici bir RAM disk bağlar, şifreli modeli RAM diske çözer ve bellekten silmek (Zeroize) için ENTER tuşuna basmanızı bekler.*
+
+#### B. Web Dashboard (Arayüz) ile Çalıştırma
+Tüm işlemleri görselleştirmek ve gerçek zamanlı takip etmek için modern web arayüzünü kullanabilirsiniz:
+
+```bash
+# Başlatıcı betiği çalıştırın (Linux/WSL):
+chmod +x run_linux.sh
+./run_linux.sh
+
+# Veya manuel olarak:
+python3 calistirma_betikleri/start_app.py
+```
+Sunucu ayağa kalktığında tarayıcınızda otomatik olarak `http://127.0.0.1:8000` adresi açılacaktır. Arayüzden model yükleme ve şifreleme adımlarını canlı olarak izleyebilirsiniz.
+
+#### C. Testleri Çalıştırma (Pytest)
+Projedeki tüm güvenlik, entegrasyon ve şifreleme modüllerini test etmek için pytest komutunu kullanabilirsiniz:
+```bash
+PYTHONPATH=. pytest
+```
+
 ---
 
 ## 🇬🇧 English
@@ -100,6 +168,76 @@ CyberPUF LLM Edition introduces a **Secure RAM-Disk Wrapper** architecture relyi
 - `llm_encryptor.py`: Takes a standard LLM model directory and outputs an AES-256 CBC encrypted `.cpuf_llm` package via chunks.
 - `llm_secure_loader.py`: The secure wrapper that mounts the `tmpfs` RAM disk, decrypts the payload on-the-fly, and securely zeroizes the data post-load.
 - `main_app.py`: Flask-based modern dark UI to manage encryption/decryption workflows.
+
+---
+
+### 🛠️ Installation
+
+#### 1. Prerequisites
+- **Linux/WSL:** Linux `tmpfs` RAM disk features are required. This project is meant to run under Linux or WSL environment.
+- **Python:** Python 3.10+ is required.
+- **Sudo Privileges:** The process requires `sudo` privileges to run `mount` and `umount` commands. Alternatively, configure your `/etc/sudoers` to allow passwordless mounting for your user.
+
+#### 2. Clone the Repository
+```bash
+git clone --recursive https://github.com/mecik-arda/CyberPUF-LLM-Edition.git
+cd CyberPUF-LLM-Edition
+```
+
+#### 3. Setup Virtual Environment & Dependencies
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### 4. Configure Environment (.env)
+Copy the `.env.example` file to `.env` and configure the settings:
+```bash
+cp .env.example .env
+```
+- `CYBERPUF_AES_KEY`: Generate a secure 64-character hex key (e.g. using `openssl rand -hex 32`).
+- `WEBSOCKET_TOKEN`: A strong random string for secure real-time communications.
+- `APP_HOST`: `127.0.0.1` or your server's IP address.
+- `APP_PORT`: Server port (Default: `8000`).
+
+---
+
+### 🚀 Usage
+
+#### A. CLI Commands for Model Encryption & Mounting
+Run the tools directly from your CLI terminal:
+
+1. **Encrypt a Model:**
+   ```bash
+   python3 llm_encryptor.py /path/to/model_folder /path/to/output_file.cpuf_llm
+   ```
+   *This command archives the directory and encrypts the binary payload using the hardware-derived key.*
+
+2. **Mount & Decrypt a Model (Secure RAM-Loader):**
+   ```bash
+   python3 llm_secure_loader.py /path/to/output_file.cpuf_llm
+   ```
+   *This command spins up a temporary secure RAM disk, decrypts the payload into memory, and waits for a keypress to securely Zeroize the RAM disk.*
+
+#### B. Launching the Web Dashboard
+Use the interactive web panel to trigger encryption and loading pipelines:
+
+```bash
+# Set execution permissions and run (Linux/WSL):
+chmod +x run_linux.sh
+./run_linux.sh
+
+# Or launch manually:
+python3 calistirma_betikleri/start_app.py
+```
+Open your browser and navigate to `http://127.0.0.1:8000`.
+
+#### C. Running Unit and Integration Tests (Pytest)
+Run the test suite using pytest to verify encryption, mounting, and decryption logic:
+```bash
+PYTHONPATH=. pytest
+```
 
 ---
 
