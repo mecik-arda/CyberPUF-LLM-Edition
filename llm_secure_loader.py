@@ -26,13 +26,12 @@ class SecureRAMLoader:
         try:
             # sudo gerektirir. Gerçek ortamda sudoers içinde NOPASSWD ayarlanmalı.
             subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=8G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL, timeout=5)
-        except Exception:
-            print("[Uyarı] sudo mount yetkisi yok veya zaman aşımına uğradı, standart tmp dizini kullanılacak (RAM Disk Simülasyonu Fallback).")
+        except Exception as e:
+            raise RuntimeError(f"[Kritik] RAM Disk (tmpfs) oluşturulamadı. Güvenlik gereği fallback yasaktır! Detay: {e}")
 
     def decrypt_to_ram(self):
         """Ağırlıkları streaming mantığıyla RAM disk'e deşifre eder."""
-        print("[Güvenlik] PUF Anahtarı türetiliyor ve AES-256 deşifre işlemi başlatılıyor...")
-        key = extract_puf_key()
+        print("[Güvenlik] Deşifre işlemi başlatılıyor...")
         
         temp_tar = os.path.join(self.ram_mount_point, "temp_weights.tar")
         
@@ -49,6 +48,14 @@ class SecureRAMLoader:
                 
             version_data = f_in.read(4)
             version = struct.unpack('<I', version_data)[0]
+            
+            if version >= 2:
+                salt = f_in.read(16)
+                key = extract_puf_key(salt)
+                data_size = file_size - 8 - 4 - 16 - 16 - 8 - 16 # V2 Format
+            else:
+                key = extract_puf_key() # V1 Format, static salt
+                data_size = file_size - 8 - 4 - 16 - 8 - 16
             
             iv = f_in.read(16)
             
@@ -73,11 +80,18 @@ class SecureRAMLoader:
                 cipher.verify(tag)
                 print("[Güvenlik] MAC doğrulaması başarılı! Dosya bütünlüğü tam.")
             except Exception as e:
-                raise ValueError(f"HATA: MAC doğrulaması başarısız. Dosya bozulmuş veya anahtar yanlış! ({e})")
+                # ÖNCE TEMİZLİK, SONRA HATA FIRLATMA
+                f_out.close()
+                self._zeroize_file(temp_tar)
+                os.remove(temp_tar)
+                raise ValueError(f"HATA: MAC doğrulaması başarısız. Veri imha edildi! ({e})")
             
         print("[Güvenlik] Ağırlıklar belleğe (RAM) çıkarılıyor...")
         with tarfile.open(temp_tar, "r") as tar:
-            tar.extractall(path=self.ram_mount_point)
+            try:
+                tar.extractall(path=self.ram_mount_point, filter='data')
+            except TypeError:
+                tar.extractall(path=self.ram_mount_point) # Fallback for old Python
             
         # Zeroize temp_tar
         self._zeroize_file(temp_tar)
@@ -85,8 +99,9 @@ class SecureRAMLoader:
         
         # Tar'dan çıkan ilk dizini bul (genellikle model klasörü)
         items = os.listdir(self.ram_mount_point)
-        if items:
-            self.extracted_path = os.path.join(self.ram_mount_point, items[0])
+        dirs = [d for d in items if os.path.isdir(os.path.join(self.ram_mount_point, d))]
+        if dirs:
+            self.extracted_path = os.path.join(self.ram_mount_point, dirs[0])
         return self.extracted_path
 
     def _zeroize_file(self, filepath):

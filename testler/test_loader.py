@@ -1,9 +1,13 @@
 import os
 import pytest
+import subprocess
+from unittest.mock import patch
 from llm_secure_loader import SecureRAMLoader
 
-def test_loader_mount_fallback(temp_workspace):
-    """Sudo izni olmadan (veya test ortamında) tmpfs mount işleminin başarılı şekilde fallback yapıp yapmadığını test eder."""
+@patch('subprocess.run')
+def test_loader_mount_fails_securely(mock_run, temp_workspace):
+    """Sudo izni olmadığında sistemin fail-closed prensibiyle Exception fırlattığını test eder."""
+    mock_run.side_effect = subprocess.TimeoutExpired(cmd="mount", timeout=5)
     loader = SecureRAMLoader("dummy.cpuf", ram_mount_point="mock_ramdisk")
-    loader.mount_ramdisk()
-    assert os.path.exists("mock_ramdisk"), "Fallback RAM Disk simülasyon klasörü oluşturulamadı."
+    with pytest.raises(RuntimeError, match=r"\[Kritik\] RAM Disk \(tmpfs\) oluşturulamadı"):
+        loader.mount_ramdisk()

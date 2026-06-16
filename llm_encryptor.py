@@ -2,15 +2,17 @@ import os
 import sys
 import tarfile
 import struct
+import tempfile
 from Crypto.Cipher import AES
 import simulated_puf
 
 MAGIC_HEADER = b"CPUF_LLM"
-VERSION = 1
+VERSION = 2
 
 def encrypt_directory(input_dir, output_file):
     print(f"[1/3] Ağırlıklar taranıyor ve geçici tar arşivine alınıyor: {input_dir}")
-    temp_tar = "temp_weights.tar"
+    fd, temp_tar = tempfile.mkstemp(suffix=".tar", prefix="temp_weights_")
+    os.close(fd)
     
     with tarfile.open(temp_tar, "w", dereference=True) as tar:
         tar.add(input_dir, arcname=os.path.basename(input_dir))
@@ -19,7 +21,8 @@ def encrypt_directory(input_dir, output_file):
     print(f"      -> Tar arşivi oluşturuldu. Orijinal Boyut: {orig_size / (1024*1024):.2f} MB")
         
     print(f"[2/3] PUF Anahtarı türetiliyor ve AES-256 motoru başlatılıyor...")
-    key = simulated_puf.extract_puf_key()
+    salt = os.urandom(16)
+    key = simulated_puf.extract_puf_key(salt)
     iv = os.urandom(16)
     cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
     
@@ -28,9 +31,10 @@ def encrypt_directory(input_dir, output_file):
     
     try:
         with open(temp_tar, "rb") as f_in, open(output_file, "wb") as f_out:
-            # Format: [MAGIC(8)] [VERSION(4)] [IV(16)] [ORIG_SIZE(8)] [DATA] [TAG(16)]
+            # Format V2: [MAGIC(8)] [VERSION(4)] [SALT(16)] [IV(16)] [ORIG_SIZE(8)] [DATA] [TAG(16)]
             f_out.write(MAGIC_HEADER)
             f_out.write(struct.pack('<I', VERSION))
+            f_out.write(salt)
             f_out.write(iv)
             f_out.write(struct.pack('<Q', orig_size))
             

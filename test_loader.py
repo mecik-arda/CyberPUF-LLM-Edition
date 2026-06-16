@@ -5,6 +5,8 @@ try:
     loader.mount_ramdisk()
     path = loader.decrypt_to_ram()
     print('GCM MAC Verify Success! Path:', path)
-    loader.zeroize_and_unmount()
 except Exception as e:
     print('Hata:', e)
+finally:
+    if 'loader' in locals():
+        loader.zeroize_and_unmount()

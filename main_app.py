@@ -53,12 +53,38 @@ def encrypt_model():
         return jsonify({"error": "Yol doğrulama hatası"}), 400
         
     def generate():
-        cmd = [sys.executable, "llm_encryptor.py", abs_model, abs_out]
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in iter(process.stdout.readline, ''):
-            yield f"data: {line.strip()}\n\n"
-        process.stdout.close()
-        process.wait()
+        import queue
+        import threading
+        import sys
+        from llm_encryptor import encrypt_directory
+        
+        q = queue.Queue()
+        
+        def worker():
+            class StreamCapture:
+                def write(self, s):
+                    if s.strip():
+                        q.put(s.strip())
+                def flush(self):
+                    pass
+            original_stdout = sys.stdout
+            sys.stdout = StreamCapture()
+            try:
+                encrypt_directory(abs_model, abs_out)
+            except Exception as e:
+                q.put(f"Hata: {e}")
+            finally:
+                sys.stdout = original_stdout
+                q.put(None)
+                
+        threading.Thread(target=worker).start()
+        
+        while True:
+            msg = q.get()
+            if msg is None:
+                break
+            yield f"data: {msg}\n\n"
+            
         yield "data: [BİTTİ]\n\n"
 
     return Response(generate(), mimetype='text/event-stream')
@@ -71,25 +97,42 @@ def load_model():
         return jsonify({"error": "cpuf_llm_path gereklidir"}), 400
         
     def generate():
-        inline_script = """
-import sys
-from llm_secure_loader import SecureRAMLoader
-try:
-    loader = SecureRAMLoader(sys.argv[1])
-    loader.mount_ramdisk()
-    path = loader.decrypt_to_ram()
-    print(f"Model Yüklendi: {path}")
-except Exception as e:
-    print(f"Hata: {e}")
-"""
-        cmd = [sys.executable, "-c", inline_script, cpuf_path]
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in iter(process.stdout.readline, ''):
-            yield f"data: {line.strip()}\n\n"
-        process.stdout.close()
-        process.wait()
-        if process.returncode == 0:
-            app_status["model_loaded"] = True
+        import queue
+        import threading
+        import sys
+        from llm_secure_loader import SecureRAMLoader
+        
+        q = queue.Queue()
+        
+        def worker():
+            class StreamCapture:
+                def write(self, s):
+                    if s.strip():
+                        q.put(s.strip())
+                def flush(self):
+                    pass
+            original_stdout = sys.stdout
+            sys.stdout = StreamCapture()
+            try:
+                loader = SecureRAMLoader(cpuf_path)
+                loader.mount_ramdisk()
+                path = loader.decrypt_to_ram()
+                q.put(f"Model Yüklendi: {path}")
+                app_status["model_loaded"] = True
+            except Exception as e:
+                q.put(f"Hata: {e}")
+            finally:
+                sys.stdout = original_stdout
+                q.put(None)
+                
+        threading.Thread(target=worker).start()
+        
+        while True:
+            msg = q.get()
+            if msg is None:
+                break
+            yield f"data: {msg}\n\n"
+            
         yield "data: [BİTTİ]\n\n"
 
     return Response(generate(), mimetype='text/event-stream')
@@ -97,21 +140,40 @@ except Exception as e:
 @app.route('/api/zeroize', methods=['POST'])
 def zeroize():
     def generate():
-        inline_script = """
-from llm_secure_loader import SecureRAMLoader
-try:
-    loader = SecureRAMLoader('')
-    loader.zeroize_and_unmount()
-except Exception as e:
-    print(f"Hata: {e}")
-"""
-        cmd = [sys.executable, "-c", inline_script]
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in iter(process.stdout.readline, ''):
-            yield f"data: {line.strip()}\n\n"
-        process.stdout.close()
-        process.wait()
-        app_status["model_loaded"] = False
+        import queue
+        import threading
+        import sys
+        from llm_secure_loader import SecureRAMLoader
+        
+        q = queue.Queue()
+        
+        def worker():
+            class StreamCapture:
+                def write(self, s):
+                    if s.strip():
+                        q.put(s.strip())
+                def flush(self):
+                    pass
+            original_stdout = sys.stdout
+            sys.stdout = StreamCapture()
+            try:
+                loader = SecureRAMLoader('')
+                loader.zeroize_and_unmount()
+                app_status["model_loaded"] = False
+            except Exception as e:
+                q.put(f"Hata: {e}")
+            finally:
+                sys.stdout = original_stdout
+                q.put(None)
+                
+        threading.Thread(target=worker).start()
+        
+        while True:
+            msg = q.get()
+            if msg is None:
+                break
+            yield f"data: {msg}\n\n"
+            
         yield "data: [BİTTİ]\n\n"
 
     return Response(generate(), mimetype='text/event-stream')

@@ -1,9 +1,11 @@
 import os
 import pytest
+from unittest.mock import patch
 from llm_encryptor import encrypt_directory
 from llm_secure_loader import SecureRAMLoader
 
-def test_full_integration(temp_workspace):
+@patch('subprocess.run')
+def test_full_integration(mock_run, temp_workspace):
     """
     Uçtan uca test:
     1. Sahte LLM klasörü oluşturulur.

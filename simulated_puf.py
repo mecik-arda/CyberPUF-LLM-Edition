@@ -1,7 +1,6 @@
 import hashlib
 import uuid
 import platform
-import psutil
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
@@ -13,17 +12,14 @@ def generate_hardware_fingerprint():
         mac = str(uuid.getnode())
         processor = platform.processor()
         
-        # Disk partitions stringification
-        partitions = psutil.disk_partitions(all=False)
-        disk_info = "".join([f"{p.device}{p.mountpoint}{p.fstype}" for p in partitions])
-        
-        fingerprint_raw = f"{node}-{mac}-{processor}-{disk_info}"
+        # Disk partitions removed for determinism
+        fingerprint_raw = f"{node}-{mac}-{processor}"
         return fingerprint_raw.encode('utf-8')
     except Exception as e:
-        # Fallback in case of failure
-        return b"fallback-simulated-hardware-uid"
+        # Fallback is dangerous, raise exception instead
+        raise RuntimeError("Donanım parmak izi okunamadı. Sistem güvenliği için PUF işlemi durduruluyor.") from e
 
-def extract_puf_key():
+def extract_puf_key(salt=b'cyberpuf-llm-edition-static-salt-v1'):
     """
     Donanımsal PUF'tan elde edilen entropiyi simüle eder.
     Gerçek dünyada fuzzy extractor üzerinden gelen ham anahtardır.
@@ -35,7 +31,7 @@ def extract_puf_key():
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=b'cyberpuf-llm-edition-static-salt-v1', # Gerçek projelerde rastgele salt metadata ile saklanır
+        salt=salt,
         info=b'puf-key-expansion',
         backend=default_backend()
     )
