@@ -1,0 +1,3 @@
+[submodule "local_ai"]
+	path = local_ai
+	url = https://github.com/mecik-arda/local_ai.git
