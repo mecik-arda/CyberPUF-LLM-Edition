@@ -17,12 +17,12 @@ Bu proje, orijinal [CyberPUF](https://github.com/mecik-arda/CyberPUF) mimarisini
 Milyarlarca parametreli yapay zeka modelleri sınır cihazlara yüklendiğinde, ağırlık dosyaları (`.safetensors` veya `.bin`) yerel diskte saklanır. Kötü niyetli kişiler bu dosyaları kolayca kopyalayarak milyonlarca dolarlık yapay zeka araştırmalarını ve özel ince ayarları (fine-tuning) çalabilir. Geleneksel tam disk şifreleme yöntemleri, cihazın bir yerinde saklanan ve ele geçirilebilecek bir anahtar gerektirir.
 
 ### CyberPUF Çözümü
-CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Güvenli RAM-Disk Wrapper** mimarisi sunar:
+CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Güvenli RAM-Disk / FUSE Wrapper** mimarisi sunar:
 
-1. **AES-256 Şifreleme:** LLM dizini sıkıştırılır ve tek bir `.cpuf_llm` dosyasına (Streaming ile chunklar halinde) şifrelenir.
-2. **PUF Tabanlı Anahtarlar:** Şifreleme/deşifreleme anahtarı diskte asla saklanmaz. Donanım parmak izi (SRAM/RO-PUF simülasyonu) kullanılarak çalışma zamanında dinamik olarak (HKDF ile) üretilir.
-3. **RAM-Disk (tmpfs) Deşifreleme:** Çalışma zamanında model **asla** fiziksel diske (SSD) geri deşifre edilmez. Linux `tmpfs` kullanılarak RAM üzerinde güvenli bir disk oluşturulur ve doğrudan oraya açılır.
-4. **Zeroization:** Çıkarım motoru (örn. OpenVINO, Llama.cpp, Transformers) ağırlıkları aktif belleğe/VRAM'e yüklediği an, deşifre edilen RAM-disk kalıcı olarak sıfırlarla ezilerek (`memset`) imha edilir ve sistemden sökülür.
+1. **Hugging Face Streaming & AES-256 Şifreleme:** LLM dizini sıkıştırılır ve tek bir `.cpuf_llm` dosyasına (Streaming ile chunklar halinde) şifrelenir. Ayrıca `/hf-indir` komutuyla modeller diske kaydedilmeden anında (on-the-fly) şifrelenebilir.
+2. **Gelişmiş PUF Entropisi:** Şifreleme anahtarı diskte asla saklanmaz. OS Kernel, UUID, MAC ve dinamik `salt` değerlerinden beslenen donanım parmak izi (SRAM/RO-PUF simülasyonu) kullanılarak dinamik üretilir.
+3. **RAM-Disk & FUSE (On-The-Fly) Deşifreleme:** Çalışma zamanında model **asla** fiziksel diske (SSD) deşifre edilmez. Kullanıcının `config.json` seçimine bağlı olarak ya Linux `tmpfs` üzerinden RAM-Disk'e ya da `fusepy` ile tamamen sanal (VFS) olarak diske açılır.
+4. **Akıllı Zeroization & TEE:** Çıkarım motoru ana süreci sonlandırdığında PID takibi (Smart Zeroize) tetiklenir. Tüm şifresiz veriler kalıcı olarak sıfırlarla ezilir (`memset`) ve RAM-disk sökülür. Proje ayrıca Intel SGX / AMD SEV tabanlı TEE (Trusted Execution Environment) Docker altyapısına da tam uyumludur.
 
 ### Mimari Diyagram
 
@@ -165,12 +165,12 @@ This project is an evolution of the original [CyberPUF](https://github.com/mecik
 When multi-billion parameter AI models are deployed on edge devices, their weights (often stored as `.safetensors` or `.bin`) reside in the local storage. Hackers can easily copy these files, effectively stealing millions of dollars worth of AI research and proprietary fine-tuning. Traditional full-disk encryption requires the key to be stored somewhere on the device, which can be extracted.
 
 ### The CyberPUF Solution
-CyberPUF LLM Edition introduces a **Secure RAM-Disk Wrapper** architecture relying on Physical Unclonable Functions (PUF):
+CyberPUF LLM Edition introduces a **Secure RAM-Disk / FUSE Wrapper** architecture relying on Physical Unclonable Functions (PUF):
 
-1. **AES-256 Encryption:** The LLM directory is compressed and encrypted into a single `.cpuf_llm` payload using streaming.
-2. **PUF Derived Keys:** The encryption/decryption key is never stored on disk. It is generated dynamically at runtime using hardware fingerprints and HKDF.
-3. **Volatile RAM-Disk (tmpfs) Decryption:** At runtime, the model is **never** decrypted back to the physical SSD. Instead, Linux `tmpfs` is used to create a secure memory-mapped disk. The weights are decrypted directly into RAM.
-4. **Zeroization:** The moment the inference engine loads the weights into active memory/VRAM, the decrypted RAM-disk is permanently wiped via memory overwriting (`memset`) and unmounted.
+1. **Hugging Face Streaming & AES-256 Encryption:** The LLM directory is compressed and encrypted into a single `.cpuf_llm` payload. You can also download and encrypt HF models on-the-fly without saving to disk in plaintext.
+2. **Enhanced PUF Derived Keys:** The encryption/decryption key is never stored on disk. It is generated dynamically at runtime using hardware fingerprints (OS Kernel, UUID, MAC, and dynamic salt) and HKDF.
+3. **Volatile RAM-Disk & FUSE Decryption:** At runtime, the model is **never** decrypted back to the physical SSD. Based on `config.json` choices, it either uses Linux `tmpfs` RAM disk or `fusepy` for a completely virtual filesystem.
+4. **Smart Zeroization & TEE:** A PID tracker automatically triggers zeroization when the inference engine terminates. The decrypted RAM-disk is permanently wiped via memory overwriting (`memset`) and unmounted. The project also ships with a mock TEE (Intel SGX/AMD SEV) Docker infrastructure.
 
 *(See the ASCII Architecture Diagram in the Turkish section above for details).*
 
