@@ -38,6 +38,9 @@ venv.bak/
 *.bin
 *.cpuf
 *.cpfe
+*.cpuf_llm
+config.json
+
 
 # VHDL / GHDL Simulation Output
 *.cf
