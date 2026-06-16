@@ -5,7 +5,9 @@ import platform
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
+from functools import lru_cache
 
+@lru_cache(maxsize=1)
 def generate_hardware_fingerprint():
     """Simüle edilmiş deterministik bir donanım parmak izi."""
     try:
