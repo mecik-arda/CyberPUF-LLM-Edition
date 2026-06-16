@@ -5,6 +5,7 @@ import struct
 import tempfile
 from Crypto.Cipher import AES
 import simulated_puf
+import pqc_helper
 
 MAGIC_HEADER = b"CPUF_LLM"
 VERSION = 2
@@ -22,20 +23,40 @@ def encrypt_directory(input_dir, output_file):
         
     print(f"[2/3] PUF Anahtarı türetiliyor ve AES-256 motoru başlatılıyor...")
     salt = simulated_puf.generate_dynamic_salt(16)
-    key = simulated_puf.extract_puf_key(salt)
-    iv = os.urandom(16)
-    cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
+    puf_base_key = simulated_puf.extract_puf_key(salt)
     
-    print(f"[3/3] Streaming şifreleme uygulanıyor (Chunk boyutu: 64MB)...")
-    CHUNK_SIZE = 64 * 1024 * 1024  # 64MB
+    # PQC Entagrasyonu
+    final_key, capsule = pqc_helper.derive_pqc_key(puf_base_key)
+    pqc_flag = 1 if capsule else 0
+    
+    iv = os.urandom(16)
+    cipher = AES.new(final_key, AES.MODE_GCM, nonce=iv)
+    
+    import json
+    config_path = os.path.join(os.path.dirname(__file__), "config.json")
+    try:
+        with open(config_path, "r") as f:
+            layer_paging = json.load(f).get("layer_paging_enabled", False)
+    except:
+        layer_paging = False
+
+    if layer_paging:
+        print(f"[Güvenlik] Katman düzeyinde parçalı şifreleme (Layer Paging) uygulanıyor...")
+        CHUNK_SIZE = 4 * 1024 * 1024  # 4MB chunks
+    else:
+        print(f"[3/3] Streaming şifreleme uygulanıyor (Chunk boyutu: 64MB)...")
+        CHUNK_SIZE = 64 * 1024 * 1024  # 64MB
     
     try:
         with open(temp_tar, "rb") as f_in, open(output_file, "wb") as f_out:
-            # Format V2: [MAGIC(8)] [VERSION(4)] [SALT(16)] [IV(16)] [ORIG_SIZE(8)] [DATA] [TAG(16)]
+            # Format V2: [MAGIC(8)] [VERSION(4)] [SALT(16)] [IV(16)] [PQC_FLAG(1)] [CAPSULE(768/0)] [ORIG_SIZE(8)] [DATA] [TAG(16)]
             f_out.write(MAGIC_HEADER)
             f_out.write(struct.pack('<I', VERSION))
             f_out.write(salt)
             f_out.write(iv)
+            f_out.write(struct.pack('B', pqc_flag))
+            if pqc_flag:
+                f_out.write(capsule)
             f_out.write(struct.pack('<Q', orig_size))
             
             while True:

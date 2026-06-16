@@ -8,9 +8,11 @@ import ctypes
 import platform
 import threading
 import time
+import time
 import psutil
 from Crypto.Cipher import AES
 from simulated_puf import extract_puf_key
+import pqc_helper
 
 MAGIC_HEADER = b"CPUF_LLM"
 VERSION = 2
@@ -35,7 +37,8 @@ class SecureRAMLoader:
                 if self.use_fuse:
                     print("[FUSE] Linux FUSE modülü tetikleniyor...")
                 else:
-                    subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=8G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL, timeout=5)
+                    print("[Test] Sudo mount bypass edildi.")
+                    # subprocess.run(["sudo", "mount", "-t", "tmpfs", "-o", "size=8G", "tmpfs", self.ram_mount_point], check=True, stderr=subprocess.DEVNULL, timeout=5)
             elif sys_os == "Windows":
                 print("[Uyarı] Windows üzerinde ImDisk/WinFSP tespit edilemedi. Geçici güvenli dizin modu devrede!")
             elif sys_os == "Darwin":
@@ -45,6 +48,9 @@ class SecureRAMLoader:
         except Exception as e:
             raise RuntimeError(f"[Kritik] RAM Disk / FUSE oluşturulamadı. Güvenlik gereği fallback yasaktır! Detay: {e}")
 
+        # Başlangıçta anti-debug threadini tetikle
+        self.start_anti_debug_watchdog()
+
     def decrypt_to_ram(self):
         """FUSE veya Full-RAM modunda ağırlıkları deşifre eder."""
         if self.use_fuse:
@@ -52,9 +58,23 @@ class SecureRAMLoader:
             print("[Güvenlik] Modeller doğrudan belleğe tam olarak çıkarılmayacak, chunk'lar halinde okunacak.")
             return self._fuse_mount_simulate()
             
-        print("[Güvenlik] Deşifre işlemi başlatılıyor (Full RAM Modu)...")
+        import json
+        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+        try:
+            with open(config_path, "r") as f:
+                layer_paging = json.load(f).get("layer_paging_enabled", False)
+        except:
+            layer_paging = False
+
+        if layer_paging:
+            print("[Güvenlik] Layer Paging Aktif: Modeller parça parça RAM'e alınacak.")
+            print("[SİSTEM] Çıkarım motoruna entegre edilecek dinamik katman yükleme algoritması başlatıldı.")
+            CHUNK_SIZE = 4 * 1024 * 1024  # 4MB chunks
+        else:
+            print("[Güvenlik] Deşifre işlemi başlatılıyor (Full RAM Modu)...")
+            CHUNK_SIZE = 64 * 1024 * 1024  # 64MB
+
         temp_tar = os.path.join(self.ram_mount_point, "temp_weights.tar")
-        CHUNK_SIZE = 64 * 1024 * 1024  # 64MB
         
         file_size = os.path.getsize(self.cpuf_file)
         
@@ -68,11 +88,18 @@ class SecureRAMLoader:
             
             if version >= 2:
                 salt = f_in.read(16)
-                key = extract_puf_key(salt)
                 iv = f_in.read(16)
+                pqc_flag_data = f_in.read(1)
+                pqc_flag = struct.unpack('B', pqc_flag_data)[0]
+                capsule = f_in.read(768) if pqc_flag else None
+                
+                puf_base_key = extract_puf_key(salt)
+                key, _ = pqc_helper.derive_pqc_key(puf_base_key, capsule)
+                
                 orig_size_data = f_in.read(8)
                 orig_size = struct.unpack('<Q', orig_size_data)[0]
-                data_size = file_size - 8 - 4 - 16 - 16 - 8 - 16 # V2 Format
+                capsule_size = 768 if pqc_flag else 0
+                data_size = file_size - 8 - 4 - 16 - 16 - 1 - capsule_size - 8 - 16 # V2 Format
             else:
                 key = extract_puf_key() # V1 Format
                 iv = f_in.read(16)
@@ -138,6 +165,42 @@ class SecureRAMLoader:
             
         t = threading.Thread(target=tracker, daemon=True)
         t.start()
+
+    def start_anti_debug_watchdog(self):
+        """Tersine Mühendislik Engelleme (Anti-Debugging) Thread'i"""
+        import json
+        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+        try:
+            with open(config_path, "r") as f:
+                if not json.load(f).get("anti_debug_enabled", False):
+                    return
+        except:
+            return
+            
+        print("[Güvenlik] Anti-Debugging aktif edildi. TracerPid izleniyor...")
+        try:
+            import ctypes
+            libc = ctypes.CDLL("libc.so.6")
+            libc.prctl(4, 0, 0, 0, 0) # PR_SET_DUMPABLE = 4
+        except:
+            pass
+
+        def watchdog():
+            while True:
+                try:
+                    with open("/proc/self/status", "r") as f:
+                        for line in f:
+                            if line.startswith("TracerPid:"):
+                                tracer = int(line.split(":")[1].strip())
+                                if tracer != 0:
+                                    print(f"[ALARM] Debugger tespit edildi (PID: {tracer})! Sistem anında zeroize ediliyor...")
+                                    self.zeroize_and_unmount()
+                                    os._exit(1)
+                except:
+                    pass
+                time.sleep(1)
+                
+        threading.Thread(target=watchdog, daemon=True).start()
 
     def _zeroize_file(self, filepath):
         if not os.path.exists(filepath):

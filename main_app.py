@@ -3,10 +3,17 @@ import sys
 import time
 import hashlib
 import subprocess
+import threading
 from flask import Flask, request, jsonify, render_template, Response
+from flask_socketio import SocketIO
 import simulated_puf
+from telemetry import telemetry_worker
 
 app = Flask(__name__, static_folder='static', template_folder='static')
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+
+# Start telemetry background thread
+threading.Thread(target=telemetry_worker, args=(socketio, app), daemon=True).start()
 
 # Bellek içi durum takibi
 app_status = {
@@ -23,6 +30,28 @@ def get_puf_hash():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/config', methods=['GET', 'POST'])
+def handle_config():
+    import json
+    config_path = os.path.join(os.path.dirname(__file__), "config.json")
+    if request.method == 'GET':
+        try:
+            with open(config_path, "r") as f:
+                return jsonify(json.load(f))
+        except:
+            return jsonify({})
+    else:
+        try:
+            with open(config_path, "r") as f:
+                cfg = json.load(f)
+        except:
+            cfg = {}
+        data = request.json
+        cfg.update(data)
+        with open(config_path, "w") as f:
+            json.dump(cfg, f, indent=4)
+        return jsonify({"status": "success", "config": cfg})
 
 @app.route('/api/status')
 def status():
@@ -179,4 +208,4 @@ def zeroize():
     return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=8000, debug=True, use_reloader=False)

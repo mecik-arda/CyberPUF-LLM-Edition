@@ -56,6 +56,31 @@
                     <button id="btn-zeroize" class="btn danger">Zeroize & RAM'i Temizle</button>
                 </div>
             </div>
+
+            <div class="card settings-card">
+                <h2>Güvenlik Ayarları (config.json)</h2>
+                <div class="toggle-group">
+                    <label><input type="checkbox" id="toggle-attestation"> Donanım Onaylama (TPM/TEE)</label>
+                    <label><input type="checkbox" id="toggle-pqc"> PQC / Kuantum Sonrası</label>
+                    <label><input type="checkbox" id="toggle-antidebug"> Anti-Debugging Koruması</label>
+                    <label><input type="checkbox" id="toggle-telemetry"> Dashboard Telemetrisi</label>
+                    <label><input type="checkbox" id="toggle-layerpaging"> Parçalı Şifre Çözme (Layer Paging)</label>
+                    <button id="btn-save-settings" class="btn primary" style="margin-top: 10px;">Ayarları Kaydet</button>
+                </div>
+            </div>
+            
+            <div class="card telemetry-card">
+                <h2>Canlı Telemetri</h2>
+                <div class="status-item">
+                    <span>CPU Kullanımı:</span> <strong id="tel-cpu">N/A</strong>
+                </div>
+                <div class="status-item">
+                    <span>RAM Kullanımı:</span> <strong id="tel-ram">N/A</strong>
+                </div>
+                <div class="status-item">
+                    <span>Sıcaklık:</span> <strong id="tel-temp">N/A</strong>
+                </div>
+            </div>
         </div>
 
         <div class="card terminal-card">
@@ -65,6 +90,7 @@
             </div>
         </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>

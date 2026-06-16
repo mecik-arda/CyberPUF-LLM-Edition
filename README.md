@@ -16,6 +16,15 @@ Bu proje, orijinal [CyberPUF](https://github.com/mecik-arda/CyberPUF) mimarisini
 ### Temel Problem
 Milyarlarca parametreli yapay zeka modelleri sınır cihazlara yüklendiğinde, ağırlık dosyaları (`.safetensors` veya `.bin`) yerel diskte saklanır. Kötü niyetli kişiler bu dosyaları kolayca kopyalayarak milyonlarca dolarlık yapay zeka araştırmalarını ve özel ince ayarları (fine-tuning) çalabilir. Geleneksel tam disk şifreleme yöntemleri, cihazın bir yerinde saklanan ve ele geçirilebilecek bir anahtar gerektirir.
 
+
+### Yeni Güvenlik Katmanları (Güncelleme)
+Mimarimize ek olarak 5 yeni üst düzey güvenlik mekanizması entegre edilmiştir:
+1. **Donanım Onaylama (Hardware Attestation):** TEE (Trusted Execution Environment) Docker enclaveleri ve sanal TPM 2.0 raporlarıyla (Quote) ana bilgisayarın bütünlüğünü yükleme öncesinde denetler.
+2. **Kuantum Sonrası Kriptografi (PQC - ML-KEM):** Rust tabanlı Kuantum sonrası anahtar kapsülleme (Key Encapsulation Mechanism) mekanizmalarıyla deşifreleme işlemini gelecekteki kuantum saldırılarına karşı korur.
+3. **Anti-Debugging ve Watchdog:** `ptrace` ve `TracerPid` üzerinden bellek döngülerini tarar. İzinsiz bir hata ayıklayıcı (debugger) veya bellek kancası (hook) algılandığı an süreci öldürür ve RAM'i sıfırlar (Zeroize).
+4. **WebSocket Telemetrisi:** Tüm şifre çözme işlemleri, güvenlik ihlalleri ve model yükleme aşamaları güvenli WebSocket (WSS) üzerinden anlık olarak arayüz paneline yansıtılır.
+5. **Katmanlı Şifre Çözme (Layer Paging):** Belleğin (RAM) tamamına modelin şifresiz halinin aynı anda çıkarılmasını engeller. Ağırlıklar parçalar (chunk) halinde deşifre edilir ve sadece aktif işlemler sırasında RAM'de tutulur.
+
 ### CyberPUF Çözümü
 CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Güvenli RAM-Disk / FUSE Wrapper** mimarisi sunar:
 
@@ -163,6 +172,15 @@ This project is an evolution of the original [CyberPUF](https://github.com/mecik
 
 ### The Core Problem
 When multi-billion parameter AI models are deployed on edge devices, their weights (often stored as `.safetensors` or `.bin`) reside in the local storage. Hackers can easily copy these files, effectively stealing millions of dollars worth of AI research and proprietary fine-tuning. Traditional full-disk encryption requires the key to be stored somewhere on the device, which can be extracted.
+
+
+### New Security Layers (Update)
+In addition to the core architecture, 5 advanced security mechanisms have been integrated:
+1. **Hardware Attestation:** Pre-validates host integrity utilizing TEE (Trusted Execution Environment) Docker enclaves and simulated TPM 2.0 cryptographic quotes.
+2. **Post-Quantum Cryptography (PQC - ML-KEM):** Protects the decryption pipeline from future quantum threats using Rust-based Post-Quantum Key Encapsulation Mechanisms.
+3. **Anti-Debugging & Watchdog:** Continuously scans for unauthorized memory hooks and debuggers via `ptrace` and `TracerPid`. Immediately kills the process and zeroizes RAM upon detection.
+4. **WebSocket Telemetry:** Streams real-time decryption progress, security alerts, and model paging statuses to the Web Dashboard over secured channels.
+5. **Layer Paging:** Prevents full-model extraction from memory by decrypting weights in cryptographic chunks, loading only active neural layers into RAM on demand.
 
 ### The CyberPUF Solution
 CyberPUF LLM Edition introduces a **Secure RAM-Disk / FUSE Wrapper** architecture relying on Physical Unclonable Functions (PUF):

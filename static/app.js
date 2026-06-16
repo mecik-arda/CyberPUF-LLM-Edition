@@ -79,4 +79,50 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("btn-zeroize").addEventListener("click", () => {
         triggerSSECommand("/api/zeroize", {});
     });
+
+    // Config Management
+    async function fetchConfig() {
+        try {
+            const res = await fetch("/api/config");
+            const config = await res.json();
+            document.getElementById("toggle-attestation").checked = config.hardware_attestation_enabled || false;
+            document.getElementById("toggle-pqc").checked = config.pqc_enabled || false;
+            document.getElementById("toggle-antidebug").checked = config.anti_debug_enabled || false;
+            document.getElementById("toggle-telemetry").checked = config.telemetry_enabled || false;
+            document.getElementById("toggle-layerpaging").checked = config.layer_paging_enabled || false;
+        } catch (e) {
+            console.error("Config fetch error", e);
+        }
+    }
+    fetchConfig();
+
+    document.getElementById("btn-save-settings").addEventListener("click", async () => {
+        const payload = {
+            hardware_attestation_enabled: document.getElementById("toggle-attestation").checked,
+            pqc_enabled: document.getElementById("toggle-pqc").checked,
+            anti_debug_enabled: document.getElementById("toggle-antidebug").checked,
+            telemetry_enabled: document.getElementById("toggle-telemetry").checked,
+            layer_paging_enabled: document.getElementById("toggle-layerpaging").checked
+        };
+        try {
+            const res = await fetch("/api/config", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                logToTerminal("[SİSTEM] Güvenlik ayarları kaydedildi.");
+            }
+        } catch (e) {
+            logToTerminal(`[HATA] Ayarlar kaydedilemedi: ${e}`);
+        }
+    });
+
+    // Socket.IO Telemetry Listener
+    const socket = io();
+    socket.on("telemetry_update", (data) => {
+        document.getElementById("tel-cpu").textContent = data.cpu_usage + "%";
+        document.getElementById("tel-ram").textContent = `${data.ram_percent}% (${data.ram_used_gb}GB / ${data.ram_total_gb}GB)`;
+        document.getElementById("tel-temp").textContent = data.temperature;
+    });
 });
