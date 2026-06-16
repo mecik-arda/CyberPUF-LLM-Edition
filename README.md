@@ -3,11 +3,11 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-Proof%20of%20Concept-orange)
 
-[🇹🇷 Türkçe](#türkçe) | [🇬🇧 English](#english)
+[Türkçe](#türkçe) | [English](#english)
 
 ---
 
-## 🇹🇷 Türkçe
+## Türkçe
 
 **CyberPUF LLM Edition**, sınır cihazlarda (edge devices) ve yerel donanımlarda çalışan Büyük Dil Modellerinin (LLM) fikri mülkiyetini (IP) güvence altına almak için tasarlanmış gelişmiş bir Donanım Güvenliği ve Edge-AI projesidir.
 
@@ -74,7 +74,7 @@ CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Gü
 - `llm_secure_loader.py`: `tmpfs` RAM diskini bağlayan, çalışma zamanında deşifre eden ve kullanım sonrası RAM'den güvenli zeroize ile silen sarıcı.
 - `main_app.py`: Süreçleri takip edebileceğiniz Flask tabanlı karanlık temalı SSE web paneli.
 
-### 🛠️ Kurulum
+### Kurulum
 
 #### 1. Ön Gereksinimler
 - **Linux/WSL:** Linux `tmpfs` RAM disk özelliği kullanıldığı için bu proje Linux veya Windows Subsystem for Linux (WSL) üzerinde çalışacak şekilde tasarlanmıştır.
@@ -106,7 +106,7 @@ cp .env.example .env
 
 ---
 
-### 🚀 Kullanım
+### Kullanım
 
 #### A. CLI Komutları ile Modeli Şifreleme ve Yükleme
 Uygulamayı doğrudan komut satırı araçları ile çalıştırabilirsiniz:
@@ -155,7 +155,7 @@ PYTHONPATH=. pytest
 
 ---
 
-## 🇬🇧 English
+## English
 
 **CyberPUF LLM Edition** is an advanced Hardware Security and Edge-AI project designed to secure the Intellectual Property (IP) of Large Language Models (LLMs) deployed on edge devices and local hardware. 
 
@@ -182,7 +182,7 @@ CyberPUF LLM Edition introduces a **Secure RAM-Disk Wrapper** architecture relyi
 
 ---
 
-### 🛠️ Installation
+### Installation
 
 #### 1. Prerequisites
 - **Linux/WSL:** Linux `tmpfs` RAM disk features are required. This project is meant to run under Linux or WSL environment.
@@ -214,7 +214,7 @@ cp .env.example .env
 
 ---
 
-### 🚀 Usage
+### Usage
 
 #### A. CLI Commands for Model Encryption & Mounting
 Run the tools directly from your CLI terminal:
