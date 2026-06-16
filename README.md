@@ -124,16 +124,27 @@ Uygulamayı doğrudan komut satırı araçları ile çalıştırabilirsiniz:
    *Bu komut, geçici bir RAM disk bağlar, şifreli modeli RAM diske çözer ve bellekten silmek (Zeroize) için ENTER tuşuna basmanızı bekler.*
 
 #### B. Web Dashboard (Arayüz) ile Çalıştırma
-Tüm işlemleri görselleştirmek ve gerçek zamanlı takip etmek için modern web arayüzünü kullanabilirsiniz:
+Tüm işlemleri görselleştirmek ve gerçek zamanlı takip etmek için modern web arayüzünü şu yöntemlerden biriyle başlatabilirsiniz:
 
-```bash
-# Başlatıcı betiği çalıştırın (Linux/WSL):
-chmod +x run_linux.sh
-./run_linux.sh
+1. **Hazır Çalıştırma Betikleri ile (Önerilen):**
+   - **Linux / WSL:**
+     ```bash
+     chmod +x run_linux.sh
+     ./run_linux.sh
+     ```
+   - **Windows:**
+     Doğrudan `run_win.bat` dosyasına çift tıklayarak ya da terminalde çalıştırarak başlatabilirsiniz.
 
-# Veya manuel olarak:
-python3 calistirma_betikleri/start_app.py
-```
+2. **`underw` CLI Aracı ile:**
+   Eğer sisteminizde `underw` CLI aracı tanımlıysa:
+   ```bash
+   underw start
+   ```
+
+3. **Manuel Olarak:**
+   ```bash
+   python3 calistirma_betikleri/start_app.py
+   ```
 Sunucu ayağa kalktığında tarayıcınızda otomatik olarak `http://127.0.0.1:8000` adresi açılacaktır. Arayüzden model yükleme ve şifreleme adımlarını canlı olarak izleyebilirsiniz.
 
 #### C. Testleri Çalıştırma (Pytest)
@@ -221,16 +232,27 @@ Run the tools directly from your CLI terminal:
    *This command spins up a temporary secure RAM disk, decrypts the payload into memory, and waits for a keypress to securely Zeroize the RAM disk.*
 
 #### B. Launching the Web Dashboard
-Use the interactive web panel to trigger encryption and loading pipelines:
+Use the interactive web panel to trigger encryption and loading pipelines. You can launch it using one of the following methods:
 
-```bash
-# Set execution permissions and run (Linux/WSL):
-chmod +x run_linux.sh
-./run_linux.sh
+1. **Using Run Scripts (Recommended):**
+   - **Linux / WSL:**
+     ```bash
+     chmod +x run_linux.sh
+     ./run_linux.sh
+     ```
+   - **Windows:**
+     Simply double-click on `run_win.bat` or run it from the Windows Command Prompt/PowerShell.
 
-# Or launch manually:
-python3 calistirma_betikleri/start_app.py
-```
+2. **Using the `underw` CLI tool:**
+   If you have the `underw` CLI tool configured:
+   ```bash
+   underw start
+   ```
+
+3. **Manually:**
+   ```bash
+   python3 calistirma_betikleri/start_app.py
+   ```
 Open your browser and navigate to `http://127.0.0.1:8000`.
 
 #### C. Running Unit and Integration Tests (Pytest)
