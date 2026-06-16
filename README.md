@@ -72,7 +72,6 @@ CyberPUF LLM Edition, Fiziksel Klonlanamaz Fonksiyonlara (PUF) dayanan bir **Gü
 - `simulated_puf.py`: Cihaz parmak izlerinden 256-bit entropi anahtarı türeterek donanım PUF simülasyonu yapar.
 - `llm_encryptor.py`: Standart LLM model klasörünü alır ve AES-256 CBC Streaming şifreli bir `.cpuf_llm` paketi çıkarır.
 - `llm_secure_loader.py`: `tmpfs` RAM diskini bağlayan, çalışma zamanında deşifre eden ve kullanım sonrası RAM'den güvenli zeroize ile silen sarıcı.
-- `ai_sifreleme/anomaly_detector.py` & `key_rotation.py`: Anormal okuma denemelerini engeller ve periyodik olarak şifreleme IV/Key rotasyonunu sağlar.
 - `main_app.py`: Süreçleri takip edebileceğiniz Flask tabanlı karanlık temalı SSE web paneli.
 
 ---
@@ -100,7 +99,6 @@ CyberPUF LLM Edition introduces a **Secure RAM-Disk Wrapper** architecture relyi
 - `simulated_puf.py`: Simulates the hardware PUF by generating a 256-bit entropy key derived from device fingerprints.
 - `llm_encryptor.py`: Takes a standard LLM model directory and outputs an AES-256 CBC encrypted `.cpuf_llm` package via chunks.
 - `llm_secure_loader.py`: The secure wrapper that mounts the `tmpfs` RAM disk, decrypts the payload on-the-fly, and securely zeroizes the data post-load.
-- `ai_sifreleme/anomaly_detector.py` & `key_rotation.py`: Provides continuous security against abnormal decryption attempts and rotates the key/IV.
 - `main_app.py`: Flask-based modern dark UI to manage encryption/decryption workflows.
 
 ---
