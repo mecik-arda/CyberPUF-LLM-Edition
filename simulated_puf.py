@@ -1,3 +1,4 @@
+import os
 import hashlib
 import uuid
 import platform
@@ -11,13 +12,19 @@ def generate_hardware_fingerprint():
         node = platform.node()
         mac = str(uuid.getnode())
         processor = platform.processor()
+        sys_os = platform.system()
+        release = platform.release()
         
-        # Disk partitions removed for determinism
-        fingerprint_raw = f"{node}-{mac}-{processor}"
+        # CPU, MAC ve OS bilgilerini birleştirerek donanım imzasını güçlendirme
+        fingerprint_raw = f"{node}-{mac}-{processor}-{sys_os}-{release}"
         return fingerprint_raw.encode('utf-8')
     except Exception as e:
         # Fallback is dangerous, raise exception instead
         raise RuntimeError("Donanım parmak izi okunamadı. Sistem güvenliği için PUF işlemi durduruluyor.") from e
+
+def generate_dynamic_salt(length=16):
+    """Her şifrelemede benzersiz dinamik salt üretir."""
+    return os.urandom(length)
 
 def extract_puf_key(salt=b'cyberpuf-llm-edition-static-salt-v1'):
     """

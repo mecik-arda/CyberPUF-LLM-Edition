@@ -21,7 +21,7 @@ def encrypt_directory(input_dir, output_file):
     print(f"      -> Tar arşivi oluşturuldu. Orijinal Boyut: {orig_size / (1024*1024):.2f} MB")
         
     print(f"[2/3] PUF Anahtarı türetiliyor ve AES-256 motoru başlatılıyor...")
-    salt = os.urandom(16)
+    salt = simulated_puf.generate_dynamic_salt(16)
     key = simulated_puf.extract_puf_key(salt)
     iv = os.urandom(16)
     cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
