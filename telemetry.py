@@ -3,7 +3,7 @@ import psutil
 import json
 import os
 
-CONFIG_FILE = "/home/ardam/local_ai/CyberPUF_LLM/config.json"
+CONFIG_FILE = "/home/ardam/underw_framework/CyberPUF_LLM/config.json"
 
 def is_telemetry_enabled():
     try:

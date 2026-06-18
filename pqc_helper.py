@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
-CONFIG_FILE = "/home/ardam/local_ai/CyberPUF_LLM/config.json"
+CONFIG_FILE = "/home/ardam/underw_framework/CyberPUF_LLM/config.json"
 
 def is_pqc_enabled():
     try:

@@ -72,7 +72,7 @@ def encrypt_model():
     if not model_path or not output_path:
         return jsonify({"error": "model_path ve output_path gereklidir"}), 400
         
-    base_dir = os.path.abspath("/home/ardam/local_ai")
+    base_dir = os.path.abspath("/home/ardam/underw_framework")
     try:
         abs_model = os.path.abspath(model_path)
         abs_out = os.path.abspath(output_path)
